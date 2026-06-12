@@ -1,0 +1,23 @@
+# Built index + downloaded MGI reports (rebuilt by `make data` / cron)
+/data/*.sqlite
+/data/*.sqlite-*
+/data/*.rpt
+/data/*.ontology
+/data/download_cache.json
+/data/.build.lock
+/data/*.sqlite.tmp
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# Env
+.env

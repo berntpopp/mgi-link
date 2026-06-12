@@ -1,0 +1,5 @@
+MGI Accession ID	Chr	cM Position	genome coordinate start	genome coordinate end	strand	Marker Symbol	Status	Marker Name	Marker Type	Feature Type	Marker Synonyms (pipe-separated)
+MGI:98968	2	105.10	105076183	105133928	-	Wt1	O	Wilms tumor 1 homolog	Gene	protein coding gene	Wt-1
+MGI:97490	2	105.50	105500000	105600000	+	Pax6	O	paired box 6	Gene	protein coding gene	Sey|Gsfaey11
+MGI:1111111	7	20.00	100000	200000	+	Fake1	O	fake gene 1	Gene	protein coding gene	Dup1
+MGI:2222222	7	21.00	300000	400000	+	Fake2	O	fake gene 2	Gene	protein coding gene	Dup1

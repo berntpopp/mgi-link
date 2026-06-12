@@ -1,0 +1,47 @@
+format-version: 1.2
+ontology: mp
+
+[Term]
+id: MP:0000001
+name: mammalian phenotype
+
+[Term]
+id: MP:0005367
+name: renal/urinary system phenotype
+is_a: MP:0000001 ! mammalian phenotype
+
+[Term]
+id: MP:0005389
+name: reproductive system phenotype
+is_a: MP:0000001 ! mammalian phenotype
+
+[Term]
+id: MP:0005385
+name: cardiovascular system phenotype
+is_a: MP:0000001 ! mammalian phenotype
+
+[Term]
+id: MP:0002006
+name: tumorigenesis
+is_a: MP:0000001 ! mammalian phenotype
+
+[Term]
+id: MP:0002135
+name: abnormal kidney morphology
+is_a: MP:0005367 ! renal/urinary system phenotype
+
+[Term]
+id: MP:0003920
+name: abnormal heart morphology
+is_a: MP:0005385 ! cardiovascular system phenotype
+
+[Term]
+id: MP:0001926
+name: female infertility
+is_a: MP:0005389 ! reproductive system phenotype
+
+[Term]
+id: MP:0008871
+name: nephroblastoma
+is_a: MP:0002006 ! tumorigenesis
+is_a: MP:0005367 ! renal/urinary system phenotype

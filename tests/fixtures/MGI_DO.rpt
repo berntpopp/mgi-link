@@ -1,0 +1,4 @@
+DO Disease ID	DO Disease Name	OMIM IDs	Common Organism Name	NCBI Taxon ID	Symbol	EntrezGene ID	Mouse MGI ID
+DOID:3764	Denys-Drash syndrome	OMIM:194080	human	9606	WT1	7490	
+DOID:3764	Denys-Drash syndrome	OMIM:194080	mouse, laboratory	10090	Wt1	22431	MGI:98968
+DOID:5408	Frasier syndrome	OMIM:136680	mouse, laboratory	10090	Wt1	22431	MGI:98968

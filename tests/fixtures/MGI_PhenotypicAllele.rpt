@@ -1,0 +1,6 @@
+MGI:1857268	Wt1<tm1Jae>	targeted mutation 1, Jerry Pelletier	Targeted	Null/knockout	7926749	MGI:98968	Wt1					Wilms tumor 1 homolog
+MGI:2183640	Wt1<tm1Nhsn>	targeted mutation 1, Nhsn	Targeted	Conditional ready	12925594	MGI:98968	Wt1					Wilms tumor 1 homolog
+MGI:3610301	Wt1<em1Bzsh>	endonuclease-mediated mutation 1	Endonuclease-mediated	Null/knockout	28939869	MGI:98968	Wt1					Wilms tumor 1 homolog
+MGI:1857269	Wt1<rrad1>	radiation induced 1	Radiation induced	Null/knockout		MGI:98968	Wt1					Wilms tumor 1 homolog
+MGI:1857270	Wt1<chem1>	chemically induced 1	Chemically induced (other)	Hypomorph		MGI:98968	Wt1					Wilms tumor 1 homolog
+MGI:2222222	Pax6<tm1Pax>	targeted mutation 1 pax	Targeted	Null/knockout	9000000	MGI:97490	Pax6					Wilms tumor 1 homolog

@@ -1,0 +1,65 @@
+# Deployment
+
+`mgi-link` serves a local SQLite index built from the MGI bulk reports. The index
+is refreshed by an **external cron job** (the in-process scheduler is OFF by
+default — `MGI_LINK_DATA__REFRESH_ENABLED=false`).
+
+## Build / refresh the index
+
+```bash
+mgi-link-data build     # force a full download + rebuild
+mgi-link-data refresh   # conditional: rebuild only if a report changed (the cron command)
+mgi-link-data status    # print provenance of the existing DB
+```
+
+`refresh` issues conditional GETs (ETag / Last-Modified), so when MGI hasn't
+published a new release every report returns `304` and no rebuild happens. MGI
+updates roughly weekly.
+
+## Cron options
+
+**Host crontab** (weekly, Monday 03:17):
+
+```cron
+17 3 * * 1  cd /opt/mgi-link && /usr/bin/env uv run mgi-link-data refresh >> /var/log/mgi-link-refresh.log 2>&1
+```
+
+**systemd timer** (recommended): a `mgi-link-refresh.service` (Type=oneshot,
+`ExecStart=uv run mgi-link-data refresh`) plus a `mgi-link-refresh.timer`
+(`OnCalendar=Mon *-*-* 03:17:00`, `RandomizedDelaySec=1800`).
+
+**Docker** (one-shot refresh service under the `tools` profile):
+
+```bash
+docker compose -f docker/docker-compose.yml run --rm refresh
+```
+
+## Running the server
+
+- **Unified** (FastAPI `/health` + MCP `/mcp` in one uvicorn process):
+  `python server.py --transport unified` or `make dev`.
+- **Stdio** (for Claude Desktop / `claude mcp add`): `mgi-link-mcp` or
+  `make mcp-serve`.
+
+## Docker
+
+```bash
+make docker-build
+make docker-up      # starts the unified server; entrypoint builds/refreshes the index first
+make docker-logs
+make docker-url     # prints the MCP URL + a `claude mcp add` line
+```
+
+The Dockerfile is multi-stage (`python:3.12-slim`, `uv sync --frozen --no-dev`),
+runs as a non-root user, persists `/app/data` (the ~370 MB index) in the
+`mgi-data` named volume, and has a `/health` healthcheck with a long
+`start-period` to cover the first build. `entrypoint.sh` runs
+`mgi-link-data refresh` before serving so the request path never triggers a lazy
+build.
+
+## Configuration
+
+All settings use the `MGI_LINK_` prefix; nested config uses `__`. See
+`.env.example`. Key vars: `MGI_LINK_TRANSPORT`, `MGI_LINK_DATA__DATA_DIR`,
+`MGI_LINK_DATA__REPORTS_BASE_URL`, `MGI_LINK_DATA__AUTO_BOOTSTRAP`,
+`MGI_LINK_DATA__REFRESH_ENABLED`.

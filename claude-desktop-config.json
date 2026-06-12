@@ -1,0 +1,17 @@
+{
+  "_comment": "Add this block to claude_desktop_config.json (mcpServers). Replace the path. The stdio entry point builds the local index on first start.",
+  "mcpServers": {
+    "mgi-link": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/absolute/path/to/mgi-link",
+        "run",
+        "mgi-link-mcp"
+      ],
+      "env": {
+        "MGI_LINK_DATA__DATA_DIR": "/absolute/path/to/mgi-link/data"
+      }
+    }
+  }
+}
