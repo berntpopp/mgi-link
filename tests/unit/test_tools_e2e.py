@@ -155,3 +155,4 @@ async def test_diagnostics_reports_live_fallback(facade: Any, structured: Any) -
     assert "live_fallback" in payload
     assert "enabled" in payload["live_fallback"]
     assert "base_url" in payload["live_fallback"]
+    assert payload["live_fallback"]["enabled"] is False

@@ -31,8 +31,8 @@ def _build_service() -> MgiService:
             logger.warning("mgi_repo_open_failed path=%s err=%s", db_path, exc)
     fallback: MouseMineClient | None = None
     if settings.mousemine.enable_live_fallback:
-        fallback = MouseMineClient(settings.mousemine)
         logger.info("mgi_live_fallback_enabled base_url=%s", settings.mousemine.base_url)
+        fallback = MouseMineClient(settings.mousemine)
     return MgiService(repo, fallback=fallback)
 
 
