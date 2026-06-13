@@ -125,3 +125,44 @@ async def test_diagnostics_has_build(facade: Any, structured: Any) -> None:
     payload = structured(await facade.call_tool("get_mgi_diagnostics", {}))
     assert "version" in payload["build"]
     assert "git_sha" in payload["build"]
+
+
+async def test_resolve_marker_live_source_in_meta(fallback_facade: Any, structured: Any) -> None:
+    payload = structured(await fallback_facade.call_tool("resolve_marker", {"query": "Wt1"}))
+    assert payload["_meta"]["source"] == "mousemine"
+    assert "source" not in payload
+
+
+async def test_get_marker_live_source_in_meta_not_body(
+    fallback_facade: Any, structured: Any
+) -> None:
+    payload = structured(await fallback_facade.call_tool("get_marker", {"query": "Wt1"}))
+    assert payload["_meta"]["source"] == "mousemine"
+    assert payload["_meta"]["partial"] is True
+    assert "source" not in payload  # lifted out of the answer body
+    assert "partial" not in payload
+    tools = [c["tool"] for c in payload["_meta"]["next_commands"]]
+    assert "get_marker_alleles" not in tools
+
+
+async def test_resolve_index_has_no_source(facade: Any, structured: Any) -> None:
+    payload = structured(await facade.call_tool("resolve_marker", {"query": "Wt1"}))
+    assert "source" not in payload["_meta"]
+
+
+async def test_diagnostics_reports_live_fallback(facade: Any, structured: Any) -> None:
+    payload = structured(await facade.call_tool("get_mgi_diagnostics", {}))
+    assert "live_fallback" in payload
+    assert "enabled" in payload["live_fallback"]
+    assert "base_url" in payload["live_fallback"]
+    assert payload["live_fallback"]["enabled"] is False
+
+
+async def test_identity_tools_data_unavailable_when_cold_no_fallback(
+    cold_facade: Any, structured: Any
+) -> None:
+    """Both identity tools must return data_unavailable when there is no repo and no fallback."""
+    for tool in ("resolve_marker", "get_marker"):
+        payload = structured(await cold_facade.call_tool(tool, {"query": "Wt1"}))
+        assert payload["success"] is False
+        assert payload["error_code"] == "data_unavailable"

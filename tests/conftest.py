@@ -69,3 +69,30 @@ def facade(service: MgiService) -> Any:
     mcp = create_mgi_mcp()
     yield mcp
     set_mgi_service(None)
+
+
+@pytest.fixture
+def fallback_facade() -> Any:
+    """A FastMCP facade whose service has no repo, only a fake MouseMine fallback."""
+    from mgi_link.mcp.facade import create_mgi_mcp
+    from mgi_link.mcp.service_adapters import set_mgi_service
+    from mgi_link.services.mgi_service import MgiService
+    from tests.unit.test_marker_provider import _FakeProvider
+
+    set_mgi_service(MgiService(None, fallback=_FakeProvider()))
+    mcp = create_mgi_mcp()
+    yield mcp
+    set_mgi_service(None)
+
+
+@pytest.fixture
+def cold_facade() -> Any:
+    """A FastMCP facade whose service has neither repo nor fallback (cold start)."""
+    from mgi_link.mcp.facade import create_mgi_mcp
+    from mgi_link.mcp.service_adapters import set_mgi_service
+    from mgi_link.services.mgi_service import MgiService
+
+    set_mgi_service(MgiService(None))
+    mcp = create_mgi_mcp()
+    yield mcp
+    set_mgi_service(None)

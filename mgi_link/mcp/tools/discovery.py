@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Literal
 from pydantic import Field
 
 from mgi_link.buildinfo import build_info
+from mgi_link.config import settings
 from mgi_link.mcp.annotations import READ_ONLY_OPEN_WORLD
 from mgi_link.mcp.capabilities import collect_tool_signatures, project_capabilities
 from mgi_link.mcp.envelope import McpErrorContext, run_mcp_tool
@@ -71,6 +72,10 @@ def register_discovery_tools(mcp: FastMCP) -> None:
         async def call() -> dict[str, Any]:
             payload = get_mgi_service().get_diagnostics()
             payload["build"] = build_info()
+            payload["live_fallback"] = {
+                "enabled": settings.mousemine.enable_live_fallback,
+                "base_url": settings.mousemine.base_url,
+            }
             payload["_meta"] = {
                 "next_commands": [cmd("resolve_marker", query="Wt1")]
                 if payload.get("data_available")

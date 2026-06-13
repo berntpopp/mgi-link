@@ -176,6 +176,13 @@ def build_capabilities() -> dict[str, Any]:
                 "resolves via the mouse symbol with match_type=current rather than "
                 "ortholog; the resolved marker is the same correct mouse marker."
             ),
+            "cold_start_fallback": (
+                "When the local index is unavailable AND mousemine.enable_live_fallback "
+                "is on, resolve_marker and get_marker serve from a live MouseMine query "
+                "(genes only; _meta.source='mousemine'; get_marker omits summary counts "
+                "and sets _meta.partial). All other tools return data_unavailable while "
+                "the index is cold. Default off: behavior is unchanged."
+            ),
         },
         "field_glossary": {
             "alleles_total": "get_marker.summary: all phenotypic alleles of the marker.",
