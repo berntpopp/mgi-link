@@ -7,6 +7,7 @@ import pytest
 import respx
 
 from mgi_link.config import MouseMineConfig
+from mgi_link.exceptions import RateLimitError, ServiceUnavailableError
 
 _BASE = "https://www.mousemine.org/mousemine/service"
 _RESULTS = f"{_BASE}/query/results"
@@ -139,3 +140,44 @@ def test_lookup_symbol_synonym_path(client) -> None:
 def test_lookup_by_xref_unknown_source_returns_empty(client) -> None:
     pairs = client.lookup_by_xref("ensembl_gene_id", "ENSMUSG000")
     assert pairs == []
+
+
+@respx.mock
+def test_retries_on_500_then_succeeds(client) -> None:
+    route = respx.get(_RESULTS).mock(
+        side_effect=[
+            httpx.Response(500),
+            httpx.Response(
+                200, json={"results": [["MGI:1", "A", "B", "g", "1", 1, 2, "+", 9, "s"]]}
+            ),
+        ]
+    )
+    marker = client.get_marker("MGI:1")
+    assert marker is not None
+    assert route.call_count == 2
+
+
+@respx.mock
+def test_429_raises_rate_limit(client) -> None:
+    respx.get(_RESULTS).mock(return_value=httpx.Response(429))
+    with pytest.raises(RateLimitError):
+        client.get_marker("MGI:1")
+
+
+@respx.mock
+def test_persistent_500_raises_service_unavailable(client) -> None:
+    respx.get(_RESULTS).mock(return_value=httpx.Response(503))
+    with pytest.raises(ServiceUnavailableError):
+        client.get_marker("MGI:1")
+
+
+@respx.mock
+def test_network_error_raises_service_unavailable(client) -> None:
+    respx.get(_RESULTS).mock(side_effect=httpx.ConnectError("boom"))
+    with pytest.raises(ServiceUnavailableError):
+        client.get_marker("MGI:1")
+
+
+def test_close_closes_client(client) -> None:
+    client.close()
+    assert client._client.is_closed
