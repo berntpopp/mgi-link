@@ -41,10 +41,16 @@ def default_error_next_commands(
 
 
 def after_resolve(resolution: dict[str, Any]) -> list[dict[str, Any]]:
-    """After resolve_marker: drill into the marker record + phenotypes."""
+    """After resolve_marker: drill into the marker record + phenotypes.
+
+    Live (MouseMine) results steer to get_marker + diagnostics, never the
+    aggregate tools, which are data_unavailable while the index is cold.
+    """
     mgi_id = resolution.get("mgi_id")
     if not mgi_id:
         return [cmd("search_markers", query=str(resolution.get("query", "")))]
+    if resolution.get("source") == "mousemine":
+        return [cmd("get_marker", query=mgi_id), cmd("get_mgi_diagnostics")]
     return [
         cmd("get_marker", query=mgi_id),
         cmd("get_marker_phenotypes", query=mgi_id),
@@ -52,10 +58,15 @@ def after_resolve(resolution: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def after_get_marker(marker: dict[str, Any]) -> list[dict[str, Any]]:
-    """After get_marker: offer alleles + the phenotype overview grid."""
+    """After get_marker: offer alleles + the phenotype overview grid.
+
+    Live (MouseMine) results steer to diagnostics/capabilities instead.
+    """
     mgi_id = marker.get("mgi_id")
     if not mgi_id:
         return [cmd("get_server_capabilities")]
+    if marker.get("source") == "mousemine":
+        return [cmd("get_mgi_diagnostics"), cmd("get_server_capabilities")]
     return [
         cmd("get_marker_alleles", query=mgi_id),
         cmd("get_phenotype_overview", query=mgi_id),

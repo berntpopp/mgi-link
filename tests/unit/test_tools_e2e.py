@@ -125,3 +125,20 @@ async def test_diagnostics_has_build(facade: Any, structured: Any) -> None:
     payload = structured(await facade.call_tool("get_mgi_diagnostics", {}))
     assert "version" in payload["build"]
     assert "git_sha" in payload["build"]
+
+
+async def test_get_marker_live_source_in_meta_not_body(
+    fallback_facade: Any, structured: Any
+) -> None:
+    payload = structured(await fallback_facade.call_tool("get_marker", {"query": "Wt1"}))
+    assert payload["_meta"]["source"] == "mousemine"
+    assert payload["_meta"]["partial"] is True
+    assert "source" not in payload  # lifted out of the answer body
+    assert "partial" not in payload
+    tools = [c["tool"] for c in payload["_meta"]["next_commands"]]
+    assert "get_marker_alleles" not in tools
+
+
+async def test_resolve_index_has_no_source(facade: Any, structured: Any) -> None:
+    payload = structured(await facade.call_tool("resolve_marker", {"query": "Wt1"}))
+    assert "source" not in payload["_meta"]
