@@ -14,13 +14,12 @@ from xml.sax.saxutils import quoteattr
 
 import httpx
 
-from mgi_link.constants import HUMAN_TAXON_ID
+from mgi_link.constants import HUMAN_TAXON_ID, MOUSE_TAXON_ID
 from mgi_link.exceptions import RateLimitError, ServiceUnavailableError
 
 if TYPE_CHECKING:
     from mgi_link.config import MouseMineConfig
 
-_MOUSE_TAXON = "10090"
 _BACKOFF_BASE = 0.5
 
 # View column order for a Gene identity lookup (see Task 3 Step 1 verification).
@@ -112,7 +111,10 @@ class MouseMineClient:
                     time.sleep(_BACKOFF_BASE * (2**attempt))
                     continue
                 raise ServiceUnavailableError()
-            resp.raise_for_status()
+            try:
+                resp.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                raise ServiceUnavailableError() from exc
             data = resp.json()
             results = data.get("results", [])
             return [list(r) for r in results]
@@ -127,7 +129,7 @@ class MouseMineClient:
 
     def lookup_symbol(self, symbol: str) -> list[tuple[str, str]]:
         """Resolve a symbol/synonym to (mgi_id, 'current'|'synonym') pairs."""
-        rows = self._rows(_query(_SYMBOL_VIEW, "Gene", "LOOKUP", symbol, extra=_MOUSE_TAXON))
+        rows = self._rows(_query(_SYMBOL_VIEW, "Gene", "LOOKUP", symbol, extra=MOUSE_TAXON_ID))
         best: dict[str, str] = {}
         target = symbol.strip().upper()
         for r in rows:
@@ -149,24 +151,22 @@ class MouseMineClient:
             return []
         view = ("Gene.primaryIdentifier",)
         rows = self._rows(_query(view, path, "=", value))
-        seen: list[str] = []
+        seen: dict[str, None] = {}
         for r in rows:
-            if r[0] not in seen:
-                seen.append(r[0])
-        return seen
+            seen[r[0]] = None
+        return list(seen)
 
     def get_ortholog(self, mgi_id: str) -> dict[str, Any] | None:
         """Return the mouse->human ortholog dict (get_marker shape) or None."""
         rows = self._rows(_query(_ORTHOLOG_VIEW, "Gene.primaryIdentifier", "=", mgi_id))
-        for r in rows:
-            if len(r) >= 3 and str(r[2]) == HUMAN_TAXON_ID:
-                ident = r[1] or ""
-                return {
-                    "human_symbol": r[0],
-                    "hgnc_id": ident if str(ident).startswith("HGNC:") else None,
-                    "omim_gene_id": None,
-                }
-        return None
+        human_rows = [r for r in rows if len(r) >= 3 and str(r[2]) == HUMAN_TAXON_ID]
+        if not human_rows:
+            return None
+        hgnc_id = next(
+            (str(r[1]) for r in human_rows if str(r[1] or "").startswith("HGNC:")),
+            None,
+        )
+        return {"human_symbol": human_rows[0][0], "hgnc_id": hgnc_id, "omim_gene_id": None}
 
 
 def _marker_from_rows(rows: list[list[Any]]) -> dict[str, Any] | None:

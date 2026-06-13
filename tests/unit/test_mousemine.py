@@ -7,10 +7,6 @@ import pytest
 import respx
 
 from mgi_link.config import MouseMineConfig
-from mgi_link.exceptions import (  # noqa: F401 - used in Task 4 retry tests
-    RateLimitError,
-    ServiceUnavailableError,
-)
 
 _BASE = "https://www.mousemine.org/mousemine/service"
 _RESULTS = f"{_BASE}/query/results"
@@ -106,3 +102,40 @@ def test_get_ortholog_maps_human(client) -> None:
 def test_lookup_by_xref_human_symbol(client) -> None:
     respx.get(_RESULTS).mock(return_value=httpx.Response(200, json={"results": [["MGI:98968"]]}))
     assert client.lookup_by_xref("human_symbol", "WT1") == ["MGI:98968"]
+
+
+@respx.mock
+def test_get_ortholog_finds_hgnc_when_not_first_row(client) -> None:
+    # A non-HGNC crossRef row precedes the HGNC row for the same human homologue.
+    respx.get(_RESULTS).mock(
+        return_value=httpx.Response(
+            200,
+            json={"results": [["WT1", "Entrez:7490", "9606"], ["WT1", "HGNC:12796", "9606"]]},
+        )
+    )
+    ortho = client.get_ortholog("MGI:98968")
+    assert ortho == {"human_symbol": "WT1", "hgnc_id": "HGNC:12796", "omim_gene_id": None}
+
+
+@respx.mock
+def test_get_ortholog_no_human_row_is_none(client) -> None:
+    respx.get(_RESULTS).mock(
+        return_value=httpx.Response(200, json={"results": [["Wt1b", "MGI:xxx", "10090"]]})
+    )
+    assert client.get_ortholog("MGI:98968") is None
+
+
+@respx.mock
+def test_lookup_symbol_synonym_path(client) -> None:
+    # LOOKUP matched via a synonym: canonical symbol differs from the query.
+    respx.get(_RESULTS).mock(
+        return_value=httpx.Response(200, json={"results": [["MGI:98968", "Wt1", "Wt33"]]})
+    )
+    pairs = client.lookup_symbol("Wt33")
+    assert pairs == [("MGI:98968", "synonym")]
+
+
+@respx.mock
+def test_lookup_by_xref_unknown_source_returns_empty(client) -> None:
+    pairs = client.lookup_by_xref("ensembl_gene_id", "ENSMUSG000")
+    assert pairs == []
