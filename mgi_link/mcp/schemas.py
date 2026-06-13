@@ -58,6 +58,7 @@ DIAGNOSTICS_SCHEMA = _envelope(
     disease_count=_INT,
     built_utc=_STR,
     build=_OBJ,
+    live_fallback=_OBJ,
 )
 
 RESOLVE_SCHEMA = _envelope(

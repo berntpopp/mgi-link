@@ -148,3 +148,10 @@ async def test_get_marker_live_source_in_meta_not_body(
 async def test_resolve_index_has_no_source(facade: Any, structured: Any) -> None:
     payload = structured(await facade.call_tool("resolve_marker", {"query": "Wt1"}))
     assert "source" not in payload["_meta"]
+
+
+async def test_diagnostics_reports_live_fallback(facade: Any, structured: Any) -> None:
+    payload = structured(await facade.call_tool("get_mgi_diagnostics", {}))
+    assert "live_fallback" in payload
+    assert "enabled" in payload["live_fallback"]
+    assert "base_url" in payload["live_fallback"]

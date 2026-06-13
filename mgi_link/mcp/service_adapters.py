@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 
+from mgi_link.api.mousemine import MouseMineClient
 from mgi_link.config import settings
 from mgi_link.data.repository import MgiRepository
 from mgi_link.exceptions import DataUnavailableError
@@ -28,7 +29,11 @@ def _build_service() -> MgiService:
             repo = MgiRepository(db_path)
         except DataUnavailableError as exc:  # pragma: no cover - corrupt db
             logger.warning("mgi_repo_open_failed path=%s err=%s", db_path, exc)
-    return MgiService(repo)
+    fallback: MouseMineClient | None = None
+    if settings.mousemine.enable_live_fallback:
+        fallback = MouseMineClient(settings.mousemine)
+        logger.info("mgi_live_fallback_enabled base_url=%s", settings.mousemine.base_url)
+    return MgiService(repo, fallback=fallback)
 
 
 def get_mgi_service() -> MgiService:
@@ -40,12 +45,16 @@ def get_mgi_service() -> MgiService:
 
 
 def reset_mgi_service() -> None:
-    """Drop the cached service so the next call re-opens the (refreshed) index."""
+    """Drop the cached service (closing its fallback client) so the next call re-opens."""
     global _service
+    if _service is not None:
+        _service.close()
     _service = None
 
 
 def set_mgi_service(service: MgiService | None) -> None:
-    """Override the singleton (used by tests)."""
+    """Override the singleton (used by tests); closes any previous service."""
     global _service
+    if _service is not None and _service is not service:
+        _service.close()
     _service = service
