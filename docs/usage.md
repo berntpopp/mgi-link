@@ -53,7 +53,7 @@ find_markers_by_phenotype(mp_id="MP:0005367")     # every mouse gene with a rena
 - `get_mp_term(mp_id)` / `search_phenotype_terms(query, limit=)` — MP ontology.
 - `find_markers_by_phenotype(mp_id, include_descendants=, limit=)` — reverse
   lookup.
-- `get_server_capabilities(detail=)` / `get_mgi_diagnostics()` — discovery.
+- `get_server_capabilities(detail=)` / `get_diagnostics()` — discovery.
 
 ## Notes
 
@@ -63,6 +63,6 @@ find_markers_by_phenotype(mp_id="MP:0005367")     # every mouse gene with a rena
 - Phenotype annotations are **single-gene genotypes** (MGI_GenePheno).
   Multigenic-genotype phenotypes, IMSR strain availability, gene expression
   (GXD), and recombinase activity are out of scope in v1.
-- Counts reflect the current MGI release (see `get_mgi_diagnostics`), which may
+- Counts reflect the current MGI release (see `get_diagnostics`), which may
   differ from an older gene-page snapshot.
 - Research use only; not for clinical decision support.

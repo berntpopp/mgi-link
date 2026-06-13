@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mgi-link"
-version = "0.1.0"
+version = "0.3.0"
 description = "MCP/API server that grounds mouse-genetics work in the MGI (Mouse Genome Informatics) dataset"
 readme = "README.md"
 license = { text = "MIT" }

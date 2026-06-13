@@ -36,7 +36,7 @@ def default_error_next_commands(
             else [cmd("get_server_capabilities")]
         )
     if error_code == "data_unavailable":
-        return [cmd("get_mgi_diagnostics")]
+        return [cmd("get_diagnostics")]
     return [cmd("get_server_capabilities")]
 
 
@@ -50,7 +50,7 @@ def after_resolve(resolution: dict[str, Any]) -> list[dict[str, Any]]:
     if not mgi_id:
         return [cmd("search_markers", query=str(resolution.get("query", "")))]
     if resolution.get("source") == "mousemine":
-        return [cmd("get_marker", query=mgi_id), cmd("get_mgi_diagnostics")]
+        return [cmd("get_marker", query=mgi_id), cmd("get_diagnostics")]
     return [
         cmd("get_marker", query=mgi_id),
         cmd("get_marker_phenotypes", query=mgi_id),
@@ -66,7 +66,7 @@ def after_get_marker(marker: dict[str, Any]) -> list[dict[str, Any]]:
     if not mgi_id:
         return [cmd("get_server_capabilities")]
     if marker.get("source") == "mousemine":
-        return [cmd("get_mgi_diagnostics"), cmd("get_server_capabilities")]
+        return [cmd("get_diagnostics"), cmd("get_server_capabilities")]
     return [
         cmd("get_marker_alleles", query=mgi_id),
         cmd("get_phenotype_overview", query=mgi_id),

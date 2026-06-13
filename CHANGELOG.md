@@ -2,6 +2,46 @@
 
 All notable changes to mgi-link are documented here.
 
+## [0.3.0] - 2026-06-13
+
+Adopt the **GeneFoundry Tool-Naming Standard v1** so the server composes cleanly
+behind `genefoundry-router` (tools surface as `mgi_<tool>` at the gateway).
+
+### Changed (BREAKING)
+
+- Renamed the discovery tool `get_mgi_diagnostics` → **`get_diagnostics`**. The
+  embedded `mgi` source token was redundant under the gateway's `mgi_` namespace
+  prefix (it produced `mgi_get_mgi_diagnostics`). The gateway-qualified name is
+  now `mgi_get_diagnostics`. The payload, behaviour, and the service method are
+  unchanged; update any direct callers of the tool name.
+
+### Added
+
+- Tool-name compliance test (`tests/unit/test_tool_names.py`): every registered
+  tool must match `^[a-z0-9_]{1,50}$`, start with a canonical verb
+  (`get|search|list|resolve|find|compare|compute`), and not self-prefix the
+  `mgi` namespace token.
+- README documents the canonical gateway **namespace token** `mgi`.
+
+### Fixed
+
+- Reconciled the package version (`pyproject.toml` was `0.1.0`, `__init__.py` was
+  `0.2.0`) to a single `0.3.0`.
+
+## [0.2.0] - 2026-06-13
+
+### Added
+
+- **Optional live MouseMine (InterMine) cold-start fallback.** When the local
+  index is unavailable and `MGI_LINK_MOUSEMINE__ENABLE_LIVE_FALLBACK=true`,
+  `resolve_marker` and `get_marker` serve from a live MouseMine query (genes
+  only); responses carry `_meta.source="mousemine"` and `get_marker` sets
+  `_meta.partial`. All other tools return `data_unavailable` while cold. Default
+  off — behaviour is unchanged.
+- Uniform truncation contract (`{total, returned, limit, truncated}`) on list
+  tools, deduplicated support-ordered phenotype term view, exact-match search
+  boosting, `_meta.elapsed_ms`, and build provenance in diagnostics.
+
 ## [0.1.0] - 2026-06-12
 
 Initial release. An MCP server grounding mouse-genetics work in MGI (Mouse Genome

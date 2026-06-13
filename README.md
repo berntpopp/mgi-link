@@ -32,7 +32,12 @@ control, and `_meta.next_commands` chaining.
 | `get_mp_term` | Mammalian Phenotype ontology term (parents/children/systems) |
 | `search_phenotype_terms` | FTS over MP terms |
 | `find_markers_by_phenotype` | Reverse: MP term → mouse genes (descendants included) |
-| `get_server_capabilities`, `get_mgi_diagnostics` | Discovery |
+| `get_server_capabilities`, `get_diagnostics` | Discovery |
+
+**Federation:** leaf tool names are intentionally unprefixed per the GeneFoundry
+Tool-Naming Standard v1. The canonical gateway **namespace token** is `mgi`; when
+federated behind `genefoundry-router`, tools surface as `mgi_<tool>` (e.g.
+`mgi_get_marker`, `mgi_get_diagnostics`).
 
 ## Data sources
 

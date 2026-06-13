@@ -95,7 +95,7 @@ def test_default_error_next_commands() -> None:
     mp = nc.default_error_next_commands("get_mp_term", "not_found", {"mp_id": "MP:1"})
     assert mp[0]["tool"] == "search_phenotype_terms"
     du = nc.default_error_next_commands("get_marker", "data_unavailable", {})
-    assert du[0]["tool"] == "get_mgi_diagnostics"
+    assert du[0]["tool"] == "get_diagnostics"
 
 
 def test_withdrawn_recovery() -> None:
@@ -107,7 +107,7 @@ def test_withdrawn_recovery() -> None:
 def test_after_resolve_source_aware() -> None:
     live = nc.after_resolve({"mgi_id": "MGI:98968", "source": "mousemine"})
     tools = [c["tool"] for c in live]
-    assert tools == ["get_marker", "get_mgi_diagnostics"]
+    assert tools == ["get_marker", "get_diagnostics"]
 
     index = nc.after_resolve({"mgi_id": "MGI:98968"})
     assert [c["tool"] for c in index] == ["get_marker", "get_marker_phenotypes"]
@@ -115,7 +115,7 @@ def test_after_resolve_source_aware() -> None:
 
 def test_after_get_marker_source_aware() -> None:
     live = nc.after_get_marker({"mgi_id": "MGI:98968", "source": "mousemine"})
-    assert [c["tool"] for c in live] == ["get_mgi_diagnostics", "get_server_capabilities"]
+    assert [c["tool"] for c in live] == ["get_diagnostics", "get_server_capabilities"]
 
     index = nc.after_get_marker({"mgi_id": "MGI:98968"})
     assert [c["tool"] for c in index] == ["get_marker_alleles", "get_phenotype_overview"]
