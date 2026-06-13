@@ -112,7 +112,7 @@ class DataUnavailableError(MgiError):
 
 
 class RateLimitError(MgiError):
-    """The live MouseMine endpoint signalled rate limiting (HTTP 429 / 403)."""
+    """The live MouseMine endpoint signalled rate limiting (HTTP 429)."""
 
     def __init__(self, message: str = "MouseMine API rate limit hit.") -> None:
         """Initialise with a 429 status code."""

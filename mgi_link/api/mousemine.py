@@ -99,7 +99,8 @@ class MouseMineClient:
                 resp = self._client.get("/query/results", params=params)
             except httpx.HTTPError as exc:  # network/timeout
                 last = exc
-                time.sleep(_BACKOFF_BASE * (2**attempt))
+                if attempt < self._config.max_retries:
+                    time.sleep(_BACKOFF_BASE * (2**attempt))
                 continue
             if resp.status_code == 429:
                 if attempt < self._config.max_retries:
