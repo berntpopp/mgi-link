@@ -107,9 +107,7 @@ class MgiService:
 
     # -- resolution ------------------------------------------------------------
 
-    def _resolve_to_marker(
-        self, raw: str, provider: MarkerProvider
-    ) -> tuple[dict[str, Any], str]:
+    def _resolve_to_marker(self, raw: str, provider: MarkerProvider) -> tuple[dict[str, Any], str]:
         """Resolve any id/symbol/ortholog to ``(marker, match_type)`` or raise."""
         mgi_id = normalize_mgi_id(raw)
         if mgi_id:
