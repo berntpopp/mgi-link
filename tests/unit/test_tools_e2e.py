@@ -108,7 +108,7 @@ async def test_ambiguous_query_envelope(facade: Any, structured: Any) -> None:
 
 
 async def test_diagnostics_tool(facade: Any, structured: Any) -> None:
-    payload = structured(await facade.call_tool("get_mgi_diagnostics", {}))
+    payload = structured(await facade.call_tool("get_diagnostics", {}))
     assert payload["data_available"] is True
     assert payload["marker_count"] == 4
 
@@ -122,7 +122,7 @@ async def test_elapsed_ms_present(facade: Any, structured: Any) -> None:
 
 
 async def test_diagnostics_has_build(facade: Any, structured: Any) -> None:
-    payload = structured(await facade.call_tool("get_mgi_diagnostics", {}))
+    payload = structured(await facade.call_tool("get_diagnostics", {}))
     assert "version" in payload["build"]
     assert "git_sha" in payload["build"]
 
@@ -151,7 +151,7 @@ async def test_resolve_index_has_no_source(facade: Any, structured: Any) -> None
 
 
 async def test_diagnostics_reports_live_fallback(facade: Any, structured: Any) -> None:
-    payload = structured(await facade.call_tool("get_mgi_diagnostics", {}))
+    payload = structured(await facade.call_tool("get_diagnostics", {}))
     assert "live_fallback" in payload
     assert "enabled" in payload["live_fallback"]
     assert "base_url" in payload["live_fallback"]

@@ -1,4 +1,4 @@
-"""Discovery tools: get_server_capabilities, get_mgi_diagnostics."""
+"""Discovery tools: get_server_capabilities, get_diagnostics."""
 
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ def register_discovery_tools(mcp: FastMCP) -> None:
         )
 
     @mcp.tool(
-        name="get_mgi_diagnostics",
+        name="get_diagnostics",
         title="Get MGI Diagnostics",
         annotations=READ_ONLY_OPEN_WORLD,
         output_schema=DIAGNOSTICS_SCHEMA,
@@ -65,10 +65,10 @@ def register_discovery_tools(mcp: FastMCP) -> None:
             "loaded release, marker/allele/phenotype/ortholog/disease counts, schema "
             "version, and when it was built. Use this to confirm freshness or "
             "diagnose a data_unavailable error. "
-            "Signature: get_mgi_diagnostics()."
+            "Signature: get_diagnostics()."
         ),
     )
-    async def get_mgi_diagnostics() -> dict[str, Any]:
+    async def get_diagnostics() -> dict[str, Any]:
         async def call() -> dict[str, Any]:
             payload = get_mgi_service().get_diagnostics()
             payload["build"] = build_info()
@@ -84,7 +84,7 @@ def register_discovery_tools(mcp: FastMCP) -> None:
             return payload
 
         return await run_mcp_tool(
-            "get_mgi_diagnostics",
+            "get_diagnostics",
             call,
-            context=McpErrorContext("get_mgi_diagnostics"),
+            context=McpErrorContext("get_diagnostics"),
         )

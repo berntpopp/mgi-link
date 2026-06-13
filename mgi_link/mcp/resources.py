@@ -42,7 +42,7 @@ MGI_SERVER_INSTRUCTIONS = (
     "infer completeness from list length.\n"
     "- Chaining: every response carries _meta.next_commands, a ready-to-call list "
     "of {tool, arguments} steps, on success AND error. Discovery: "
-    "get_server_capabilities or get_mgi_diagnostics, or read mgi://capabilities / "
+    "get_server_capabilities or get_diagnostics, or read mgi://capabilities / "
     "mgi://tools. "
     f"{RESEARCH_USE_NOTICE}"
 )
@@ -66,7 +66,7 @@ MGI_REFERENCE_NOTES = (
     "from a human gene). The local index is built from the MGI bulk reports "
     "(MRK_List2, MGI_PhenotypicAllele, MGI_GenePheno, VOC_MammalianPhenotype, "
     "MPheno_OBO, HOM_MouseHumanSequence, MGI_DO) and refreshed by an external "
-    "cron job; get_mgi_diagnostics reports the loaded release and counts. "
+    "cron job; get_diagnostics reports the loaded release and counts. "
     "Phenotype annotations are single-gene genotypes (MGI_GenePheno); multigenic "
     "genotypes, IMSR strain availability, and gene expression are out of scope in "
     "v1. Truncation contract: every list tool returns total/returned/limit/truncated "

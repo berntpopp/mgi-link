@@ -62,7 +62,7 @@ _SUMMARY_KEYS: tuple[str, ...] = (
 
 TOOLS: list[str] = [
     "get_server_capabilities",
-    "get_mgi_diagnostics",
+    "get_diagnostics",
     "resolve_marker",
     "get_marker",
     "search_markers",
