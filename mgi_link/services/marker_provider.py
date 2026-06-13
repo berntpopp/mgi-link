@@ -8,10 +8,9 @@ so the repository satisfies the Protocol structurally under mypy strict.
 
 from __future__ import annotations
 
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol
 
 
-@runtime_checkable
 class MarkerProvider(Protocol):
     """The four lookups the resolution cascade depends on."""
 

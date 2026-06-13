@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from mgi_link.data.repository import MgiRepository
 
 _MAX_CANDIDATES = 25
+_INDEX_NOT_BUILT = "The local MGI index is not built yet. Run `mgi-link-data build`."
 
 
 class MgiService:
@@ -58,9 +59,7 @@ class MgiService:
     def repo(self) -> MgiRepository:
         """Return the repository or raise a data-unavailable error."""
         if self._repo is None:
-            raise DataUnavailableError(
-                "The local MGI index is not built yet. Run `mgi-link-data build`."
-            )
+            raise DataUnavailableError(_INDEX_NOT_BUILT)
         return self._repo
 
     @property
@@ -70,9 +69,7 @@ class MgiService:
             return self._repo
         if self._fallback is not None:
             return self._fallback
-        raise DataUnavailableError(
-            "The local MGI index is not built yet. Run `mgi-link-data build`."
-        )
+        raise DataUnavailableError(_INDEX_NOT_BUILT)
 
     @property
     def using_fallback(self) -> bool:
