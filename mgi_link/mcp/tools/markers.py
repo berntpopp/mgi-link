@@ -45,7 +45,7 @@ def register_marker_tools(mcp: FastMCP) -> None:
             payload = get_mgi_service().resolve(query, response_mode)
             meta: dict[str, Any] = {"next_commands": after_resolve(payload)}
             source = payload.pop("source", None)
-            if source:
+            if source is not None:
                 meta["source"] = source
             payload["_meta"] = meta
             return payload
@@ -79,9 +79,9 @@ def register_marker_tools(mcp: FastMCP) -> None:
             meta: dict[str, Any] = {"next_commands": after_get_marker(payload)}
             source = payload.pop("source", None)
             partial = payload.pop("partial", None)
-            if source:
+            if source is not None:
                 meta["source"] = source
-            if partial:
+            if partial is not None:
                 meta["partial"] = partial
             payload["_meta"] = meta
             return payload

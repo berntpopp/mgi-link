@@ -105,21 +105,17 @@ def test_withdrawn_recovery() -> None:
 
 
 def test_after_resolve_source_aware() -> None:
-    from mgi_link.mcp.next_commands import after_resolve
-
-    live = after_resolve({"mgi_id": "MGI:98968", "source": "mousemine"})
+    live = nc.after_resolve({"mgi_id": "MGI:98968", "source": "mousemine"})
     tools = [c["tool"] for c in live]
     assert tools == ["get_marker", "get_mgi_diagnostics"]
 
-    index = after_resolve({"mgi_id": "MGI:98968"})
+    index = nc.after_resolve({"mgi_id": "MGI:98968"})
     assert [c["tool"] for c in index] == ["get_marker", "get_marker_phenotypes"]
 
 
 def test_after_get_marker_source_aware() -> None:
-    from mgi_link.mcp.next_commands import after_get_marker
-
-    live = after_get_marker({"mgi_id": "MGI:98968", "source": "mousemine"})
+    live = nc.after_get_marker({"mgi_id": "MGI:98968", "source": "mousemine"})
     assert [c["tool"] for c in live] == ["get_mgi_diagnostics", "get_server_capabilities"]
 
-    index = after_get_marker({"mgi_id": "MGI:98968"})
+    index = nc.after_get_marker({"mgi_id": "MGI:98968"})
     assert [c["tool"] for c in index] == ["get_marker_alleles", "get_phenotype_overview"]

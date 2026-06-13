@@ -127,6 +127,12 @@ async def test_diagnostics_has_build(facade: Any, structured: Any) -> None:
     assert "git_sha" in payload["build"]
 
 
+async def test_resolve_marker_live_source_in_meta(fallback_facade: Any, structured: Any) -> None:
+    payload = structured(await fallback_facade.call_tool("resolve_marker", {"query": "Wt1"}))
+    assert payload["_meta"]["source"] == "mousemine"
+    assert "source" not in payload
+
+
 async def test_get_marker_live_source_in_meta_not_body(
     fallback_facade: Any, structured: Any
 ) -> None:
