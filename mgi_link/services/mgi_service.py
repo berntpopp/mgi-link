@@ -27,6 +27,7 @@ from mgi_link.identifiers import (
     normalize_mgi_id,
     normalize_mp_id,
 )
+from mgi_link.services.marker_provider import MarkerProvider
 from mgi_link.services.pagination import page_fields
 from mgi_link.services.shaping import (
     shape_allele,
@@ -46,9 +47,12 @@ _MAX_CANDIDATES = 25
 class MgiService:
     """High-level MGI operations backed by the local SQLite index."""
 
-    def __init__(self, repository: MgiRepository | None) -> None:
-        """Wire a repository (primary data source)."""
+    def __init__(
+        self, repository: MgiRepository | None, *, fallback: MarkerProvider | None = None
+    ) -> None:
+        """Wire the primary repository and an optional live fallback provider."""
         self._repo = repository
+        self._fallback = fallback
 
     @property
     def repo(self) -> MgiRepository:
@@ -58,6 +62,28 @@ class MgiService:
                 "The local MGI index is not built yet. Run `mgi-link-data build`."
             )
         return self._repo
+
+    @property
+    def _provider(self) -> MarkerProvider:
+        """The live marker source: the repo if built, else the fallback."""
+        if self._repo is not None:
+            return self._repo
+        if self._fallback is not None:
+            return self._fallback
+        raise DataUnavailableError(
+            "The local MGI index is not built yet. Run `mgi-link-data build`."
+        )
+
+    @property
+    def using_fallback(self) -> bool:
+        """True when the repo is absent and the fallback provider is serving."""
+        return self._repo is None and self._fallback is not None
+
+    def close(self) -> None:
+        """Release the fallback client (the repo is closed by its owner)."""
+        fallback = self._fallback
+        if fallback is not None and hasattr(fallback, "close"):
+            fallback.close()
 
     # -- diagnostics -----------------------------------------------------------
 
@@ -84,28 +110,30 @@ class MgiService:
 
     # -- resolution ------------------------------------------------------------
 
-    def _resolve_to_marker(self, raw: str) -> tuple[dict[str, Any], str]:
+    def _resolve_to_marker(
+        self, raw: str, provider: MarkerProvider
+    ) -> tuple[dict[str, Any], str]:
         """Resolve any id/symbol/ortholog to ``(marker, match_type)`` or raise."""
         mgi_id = normalize_mgi_id(raw)
         if mgi_id:
-            marker = self.repo.get_marker(mgi_id)
+            marker = provider.get_marker(mgi_id)
             if marker is not None:
                 return marker, "mgi_id"
             raise NotFoundError(f"No MGI marker for {mgi_id}.")
 
-        pairs = self.repo.lookup_symbol(raw)
+        pairs = provider.lookup_symbol(raw)
         if pairs:
             best_type = pairs[0][1]
             best = [p for p in pairs if p[1] == best_type]
             if len(best) > 1:
-                raise self._ambiguity_error(raw, best_type, best)
-            marker = self.repo.get_marker(best[0][0])
+                raise self._ambiguity_error(raw, best_type, best, provider)
+            marker = provider.get_marker(best[0][0])
             if marker is not None:
                 return marker, best_type
 
-        ortholog_id = self._resolve_via_xref(raw)
+        ortholog_id = self._resolve_via_xref(raw, provider)
         if ortholog_id is not None:
-            marker = self.repo.get_marker(ortholog_id)
+            marker = provider.get_marker(ortholog_id)
             if marker is not None:
                 return marker, "ortholog"
 
@@ -114,7 +142,7 @@ class MgiService:
             "human gene symbol/HGNC id for the ortholog."
         )
 
-    def _resolve_via_xref(self, raw: str) -> str | None:
+    def _resolve_via_xref(self, raw: str, provider: MarkerProvider) -> str | None:
         """Try the xref index (human symbol, HGNC, Ensembl) for a marker id."""
         candidates: list[str] = []
         source = infer_xref_source(raw)
@@ -124,16 +152,16 @@ class MgiService:
         if not looks_like_mgi_id(raw):
             candidates.append("human_symbol")
         for src in candidates:
-            ids = self.repo.lookup_by_xref(src, raw)
+            ids = provider.lookup_by_xref(src, raw)
             if ids:
                 return ids[0]
         return None
 
     def _ambiguity_error(
-        self, raw: str, best_type: str, best: list[tuple[str, str]]
+        self, raw: str, best_type: str, best: list[tuple[str, str]], provider: MarkerProvider
     ) -> AmbiguousQueryError:
         candidates = [
-            _brief(self.repo.get_marker(mid) or {"mgi_id": mid}, stype) for mid, stype in best
+            _brief(provider.get_marker(mid) or {"mgi_id": mid}, stype) for mid, stype in best
         ]
         return AmbiguousQueryError(
             f"'{raw}' is a {best_type} symbol for {len(best)} markers; pick one and call get_marker.",
@@ -145,7 +173,7 @@ class MgiService:
         raw = (query or "").strip()
         if not raw:
             raise InvalidInputError("query must be a non-empty symbol or MGI id.", field="query")
-        marker, match_type = self._resolve_to_marker(raw)
+        marker, match_type = self._resolve_to_marker(raw, self._provider)
         record = {
             "query": raw,
             "mgi_id": marker.get("mgi_id"),
@@ -156,7 +184,10 @@ class MgiService:
             "location": _location(marker),
             "match_type": match_type,
         }
-        return shape_resolution(record, mode)
+        out = shape_resolution(record, mode)
+        if self.using_fallback:
+            out["source"] = "mousemine"
+        return out
 
     # -- marker record ---------------------------------------------------------
 
@@ -165,28 +196,33 @@ class MgiService:
         raw = (query or "").strip()
         if not raw:
             raise InvalidInputError("query must be a non-empty symbol or MGI id.", field="query")
-        marker, match_type = self._resolve_to_marker(raw)
+        marker, match_type = self._resolve_to_marker(raw, self._provider)
         mgi_id = marker["mgi_id"]
         record = dict(marker)
         record["requested_query"] = raw
         record["match_type"] = match_type
         record["location"] = _location(marker)
-        ortholog = self.repo.get_ortholog(mgi_id)
+        ortholog = self._provider.get_ortholog(mgi_id)
         if ortholog:
             record["human_ortholog"] = {
                 "symbol": ortholog.get("human_symbol"),
                 "hgnc_id": ortholog.get("hgnc_id"),
                 "omim_gene_id": ortholog.get("omim_gene_id"),
             }
-        counts = self.repo.allele_category_counts(mgi_id)
-        pheno = self.repo.phenotype_summary(mgi_id)
-        record["summary"] = {
-            "alleles_total": sum(counts.values()),
-            "phenotypes": pheno["phenotypes"],
-            "phenotype_references": pheno["references"],
-            "diseases": len(self.repo.get_diseases(mgi_id)),
-        }
-        return shape_marker(record, mode)
+        if not self.using_fallback:
+            counts = self.repo.allele_category_counts(mgi_id)
+            pheno = self.repo.phenotype_summary(mgi_id)
+            record["summary"] = {
+                "alleles_total": sum(counts.values()),
+                "phenotypes": pheno["phenotypes"],
+                "phenotype_references": pheno["references"],
+                "diseases": len(self.repo.get_diseases(mgi_id)),
+            }
+        out = shape_marker(record, mode)
+        if self.using_fallback:
+            out["source"] = "mousemine"
+            out["partial"] = True
+        return out
 
     def search(
         self, query: str, *, marker_type: str | None = None, limit: int = 25, mode: str = "compact"
@@ -217,7 +253,7 @@ class MgiService:
         mode: str = "compact",
     ) -> dict[str, Any]:
         """Return alleles + generation-method category counts for a marker."""
-        marker, _ = self._resolve_to_marker((query or "").strip())
+        marker, _ = self._resolve_to_marker((query or "").strip(), self.repo)
         mgi_id = marker["mgi_id"]
         limit = max(1, min(limit, 1000))
         type_filter = _normalize_allele_type(allele_type)
@@ -254,7 +290,7 @@ class MgiService:
         TERM view; full returns the per-genotype rows. ``limit`` applies to the unit
         each view emits and the truncation contract makes any cap explicit.
         """
-        marker, _ = self._resolve_to_marker((query or "").strip())
+        marker, _ = self._resolve_to_marker((query or "").strip(), self.repo)
         mgi_id = marker["mgi_id"]
         limit = max(1, min(limit, 1000))
         system_id = self._resolve_system(mp_system) if mp_system else None
@@ -281,7 +317,7 @@ class MgiService:
 
     def get_phenotype_overview(self, query: str) -> dict[str, Any]:
         """Return the top-level MP system grid (Phenotype Overview) for a marker."""
-        marker, _ = self._resolve_to_marker((query or "").strip())
+        marker, _ = self._resolve_to_marker((query or "").strip(), self.repo)
         mgi_id = marker["mgi_id"]
         overview = self.repo.phenotype_overview(mgi_id)
         summary = self.repo.phenotype_summary(mgi_id)
@@ -297,7 +333,7 @@ class MgiService:
 
     def get_diseases(self, query: str) -> dict[str, Any]:
         """Return human-mouse disease models for a marker."""
-        marker, _ = self._resolve_to_marker((query or "").strip())
+        marker, _ = self._resolve_to_marker((query or "").strip(), self.repo)
         mgi_id = marker["mgi_id"]
         diseases = self.repo.get_diseases(mgi_id)
         return {
@@ -309,7 +345,7 @@ class MgiService:
 
     def get_ortholog(self, query: str, mode: str = "compact") -> dict[str, Any]:
         """Return the mouse<->human ortholog mapping for a marker (or human gene)."""
-        marker, match_type = self._resolve_to_marker((query or "").strip())
+        marker, match_type = self._resolve_to_marker((query or "").strip(), self.repo)
         mgi_id = marker["mgi_id"]
         ortholog = self.repo.get_ortholog(mgi_id)
         xrefs: dict[str, Any] = {}
