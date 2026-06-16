@@ -1,0 +1,88 @@
+# Nginx Proxy Manager deployment overlay for mgi-link.
+#
+# Self-contained (used standalone, not layered on docker-compose.yml): one
+# unified container serves the FastAPI REST API on / and the MCP streamable-HTTP
+# transport on /mcp via a single port (8000). NPM reverse-proxies to the fixed
+# container_name on the shared external npm_default network. Mirrors the
+# gtex-link / hgnc-link fleet pattern.
+#
+#   docker compose -f docker/docker-compose.npm.yml --env-file .env.docker up -d --build
+name: mgi-link-npm
+
+services:
+  mgi_link:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: production
+    container_name: mgi-link-npm
+    # NO published host ports - NPM handles all routing via the container name.
+    expose:
+      - "8000"
+    environment:
+      - MGI_LINK_HOST=0.0.0.0
+      - MGI_LINK_PORT=8000
+      - MGI_LINK_TRANSPORT=unified
+      - MGI_LINK_MCP_PATH=/mcp
+      - MGI_LINK_LOG_LEVEL=${LOG_LEVEL_API:-INFO}
+      - MGI_LINK_LOG_FORMAT=json
+      - MGI_LINK_DATA__DATA_DIR=/app/data
+      - MGI_LINK_DATA__AUTO_BOOTSTRAP=true
+      # No cron sidecar in the NPM deploy, so let the in-app scheduler keep the
+      # index fresh. MGI reports update ~weekly (168h); conditional refresh is a
+      # cheap no-op when unchanged.
+      - MGI_LINK_DATA__REFRESH_ENABLED=true
+      - MGI_LINK_DATA__REFRESH_INTERVAL_HOURS=168
+    # The image ENTRYPOINT builds the index then exec's the unified server,
+    # reading MGI_LINK_TRANSPORT/HOST/PORT above; no command override needed.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      # First boot downloads (~33MB) + builds the local MGI SQLite index.
+      start_period: 150s
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      # TMPDIR=/tmp/mgi-link (set in the image) - download/build scratch space.
+      - /tmp/mgi-link:rw,noexec,nosuid,size=256m,mode=1777
+    volumes:
+      # Persist the built MGI SQLite index across container restarts.
+      - mgi-data:/app/data
+    networks:
+      - mgi_link_internal_net
+      - npm_proxy_network
+    deploy:
+      resources:
+        limits:
+          memory: ${MGI_API_MEMORY_LIMIT:-1g}
+          cpus: ${MGI_API_CPU_LIMIT:-1.0}
+          pids: 256
+        reservations:
+          memory: 256m
+          cpus: 0.25
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+        labels: "service=mgi-link,environment=production,proxy=npm"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    init: true
+
+volumes:
+  mgi-data:
+    driver: local
+
+networks:
+  mgi_link_internal_net:
+    driver: bridge
+    name: mgi_link_internal_net
+  npm_proxy_network:
+    external: true
+    name: ${NPM_SHARED_NETWORK_NAME:-npm_default}
