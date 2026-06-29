@@ -1,0 +1,30 @@
+# Build context is the repo root (docker/Dockerfile builds from `..`), so this
+# root .dockerignore is the one BuildKit applies. Keep secrets (incl. a local
+# docker/.env), VCS, caches, tests, and docs out of the image layers
+# (Hardening Standard v1 §1).
+.git/
+.gitignore
+.gitattributes
+.github/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+coverage.xml
+.env
+.env.*
+!.env.example
+!.env.docker.example
+docs/
+tests/
+data/
+*.sqlite
+*.db
+*.log
+.DS_Store
