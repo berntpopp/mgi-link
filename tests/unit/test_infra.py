@@ -77,6 +77,10 @@ def test_app_health_and_root(monkeypatch: pytest.MonkeyPatch) -> None:
     with TestClient(app) as client:
         health = client.get("/health")
         assert health.status_code == 200
-        assert health.json()["service"] == "mgi-link"
+        body = health.json()
+        assert body["service"] == "mgi-link"
+        assert body["status"] == "ok"
+        assert body["version"]
+        assert body["transport"] == "streamable-http-stateless"
         root = client.get("/")
         assert root.json()["name"] == "mgi-link"
