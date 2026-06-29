@@ -42,6 +42,25 @@ services:
       retries: 3
       start_period: 120s
     restart: unless-stopped
+    # Container & Deployment Hardening Standard v1 (§2-4): mirror the npm overlay's
+    # hardening on the base so running it directly is also safe. The rootfs is
+    # read-only; the only writable paths are the mgi-data volume (built SQLite
+    # index) and a tmpfs scratch (TMPDIR=/tmp/mgi-link for download/build).
+    read_only: true
+    tmpfs:
+      - /tmp/mgi-link:rw,noexec,nosuid,size=256m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    pids_limit: 256
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+          pids: 256
     logging:
       driver: "json-file"
       options:

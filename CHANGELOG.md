@@ -2,6 +2,17 @@
 
 All notable changes to mgi-link are documented here.
 
+## [Unreleased]
+
+### Security (Container & Deployment Hardening Standard v1)
+
+- Pinned the `python:3.12-slim` base image by digest, added a root
+  `.dockerignore` (keeps the local `docker/.env` and caches out of image layers),
+  added a `container-security` CI workflow (Trivy + CycloneDX SBOM), and brought
+  the base `docker-compose.yml` to parity with the npm overlay (`read_only`
+  rootfs + tmpfs scratch, `cap_drop: ALL`, `no-new-privileges`, `init`,
+  pids/mem/cpu limits; the `mgi-data` volume remains the only writable mount).
+
 ## [0.3.0] - 2026-06-13
 
 Adopt the **GeneFoundry Tool-Naming Standard v1** so the server composes cleanly
