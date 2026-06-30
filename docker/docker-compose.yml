@@ -12,8 +12,13 @@ services:
         MGI_LINK_GIT_SHA: ${MGI_LINK_GIT_SHA:-unknown}
         MGI_LINK_BUILT_AT: ${MGI_LINK_BUILT_AT:-}
     container_name: mgi-link
+    # Dev/local only — loopback-bound (127.0.0.1) so copying this file to a
+    # server never publishes the unauthenticated backend on the public IP
+    # (Docker would otherwise bind 0.0.0.0 and bypass the host firewall).
+    # Production fronts the container with a reverse proxy via the prod/npm
+    # overlays (ports: !reset []). Backends are unauthenticated by design.
     ports:
-      - "${MGI_LINK_HOST_PORT:-8000}:8000"
+      - "127.0.0.1:${MGI_LINK_HOST_PORT:-8000}:8000"
     env_file:
       - path: ../.env
         required: false
