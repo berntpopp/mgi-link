@@ -4,6 +4,8 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-06-30
+
 ### Security (Container & Deployment Hardening Standard v1)
 
 - Pinned the `python:3.12-slim` base image by digest, added a root

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastmcp import FastMCP
 
+from mgi_link import __version__
 from mgi_link.mcp.capabilities import register_capability_resources
 from mgi_link.mcp.middleware import ArgValidationMiddleware
 from mgi_link.mcp.resources import MGI_SERVER_INSTRUCTIONS
@@ -21,6 +22,7 @@ def create_mgi_mcp() -> FastMCP:
     """Build a FastMCP instance with all mgi-link tools and resources."""
     mcp = FastMCP(
         name="mgi-link",
+        version=__version__,
         instructions=MGI_SERVER_INSTRUCTIONS,
         mask_error_details=True,
     )
