@@ -31,10 +31,16 @@ from mgi_link.mcp.next_commands import cmd, default_error_next_commands, withdra
 
 logger = logging.getLogger(__name__)
 
-# Per-call _meta is kept lean: static provenance (research-use restriction,
-# citation, MGI release) lives ONLY in get_server_capabilities. Per-call _meta
-# carries only dynamic fields: tool, request_id, next_commands.
+# Per-call _meta is kept lean: static provenance (citation, MGI release) lives
+# ONLY in get_server_capabilities. Per-call _meta carries dynamic fields (tool,
+# request_id, next_commands) PLUS the research-use disclaimer
+# (unsafe_for_clinical_use), which -- per the fleet-wide Response-Envelope
+# Standard v1 -- must be repeated on every call, success and error alike, at
+# every response_mode. _UNSAFE_FOR_CLINICAL_USE_META is merged in last on every
+# envelope-building path so no response_mode projection or field allowlist can
+# ever drop it.
 _RETRYABLE = {"rate_limited", "upstream_unavailable", "data_unavailable"}
+_UNSAFE_FOR_CLINICAL_USE_META: dict[str, Any] = {"unsafe_for_clinical_use": True}
 
 
 @dataclass
@@ -103,7 +109,11 @@ def _error_envelope(exc: BaseException, context: McpErrorContext) -> dict[str, A
         "message": message,
         "retryable": error_code in _RETRYABLE,
         "recovery_action": _recovery_action(error_code),
-        "_meta": {"tool": context.tool_name, "request_id": _request_id()},
+        "_meta": {
+            "tool": context.tool_name,
+            "request_id": _request_id(),
+            **_UNSAFE_FOR_CLINICAL_USE_META,
+        },
     }
     if isinstance(exc, InvalidInputError):
         if exc.field is not None:
@@ -165,6 +175,7 @@ def build_arg_error_envelope(
                 "tool": tool_name,
                 "request_id": _request_id(),
                 "next_commands": [cmd("get_server_capabilities")],
+                **_UNSAFE_FOR_CLINICAL_USE_META,
             },
         }
     if error_type == "missing_argument":
@@ -188,6 +199,7 @@ def build_arg_error_envelope(
             "tool": tool_name,
             "request_id": _request_id(),
             "next_commands": [cmd("get_server_capabilities")],
+            **_UNSAFE_FOR_CLINICAL_USE_META,
         },
     }
 
@@ -211,6 +223,9 @@ async def run_mcp_tool(
                 "tool": tool_name,
                 "request_id": _request_id(),
                 "elapsed_ms": int((time.perf_counter() - start) * 1000),
+                # Merged in last (after existing_meta) so it always wins and can
+                # never be stripped or overridden by a tool body's own _meta.
+                **_UNSAFE_FOR_CLINICAL_USE_META,
             }
         return result
     except Exception as exc:  # broad catch is the error-boundary contract

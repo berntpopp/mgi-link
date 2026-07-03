@@ -4,6 +4,13 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- Per-call research-use disclaimer (`unsafe_for_clinical_use`) now emitted in
+  `_meta` on every tool response, all response_modes, success and error paths
+  (fleet Response-Envelope Standard v1 disclaimer standardization). Previously
+  this restriction was declared only once, in `get_server_capabilities`.
+
 ### Security (Container & Deployment Hardening Standard v1)
 
 - Pinned the `python:3.12-slim` base image by digest, added a root
