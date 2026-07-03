@@ -4,6 +4,13 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- Per-call research-use disclaimer (`unsafe_for_clinical_use`) now emitted in
+  `_meta` on every tool response, all response_modes, success and error paths
+  (fleet Response-Envelope Standard v1 disclaimer standardization). Previously
+  this restriction was declared only once, in `get_server_capabilities`.
+
 ## [0.3.1] - 2026-06-30
 
 ### Security (Container & Deployment Hardening Standard v1)

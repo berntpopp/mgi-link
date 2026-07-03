@@ -111,11 +111,16 @@ def build_capabilities() -> dict[str, Any]:
         "ortholog_fields": [{"field": f, "label": label} for f, label in ORTHOLOG_XREF_FIELDS],
         "xref_lookup_sources": sorted(set(XREF_SOURCE_ALIASES.values())),
         "provenance_policy": (
-            "Static provenance (research-use restriction, citation, MGI release) "
-            "is declared here and applies to ALL tool outputs; it is not repeated "
-            "per-call to conserve context tokens."
+            "Static provenance (citation, MGI release, full research-use notice "
+            "text) is declared here and applies to ALL tool outputs; it is not "
+            "repeated per-call to conserve context tokens. The research-use "
+            "RESTRICTION itself is the exception: per the fleet-wide "
+            "Response-Envelope Standard v1, _meta.unsafe_for_clinical_use=true is "
+            "stamped on every tool response (success and error, at every "
+            "response_mode) so it survives even if this capabilities payload is "
+            "never read."
         ),
-        "per_call_meta": ["tool", "request_id", "next_commands"],
+        "per_call_meta": ["tool", "request_id", "next_commands", "unsafe_for_clinical_use"],
         "id_normalization": (
             "MGI ids accepted/returned as both 'MGI:98968' and '98968'; MP term ids "
             "as 'MP:0005367'."
