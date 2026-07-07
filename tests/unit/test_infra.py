@@ -54,6 +54,34 @@ async def test_bootstrap_data_resets_service(monkeypatch: pytest.MonkeyPatch) ->
     assert calls.get("reset") is True
 
 
+async def test_bootstrap_data_logs_no_absolute_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The ready log must not leak the absolute db path (can expose local usernames)."""
+    secret_dir = Path("/home/some-user/private-data")
+
+    def fake_ensure(config: MgiDataConfig) -> Path:
+        return secret_dir / "mgi.sqlite"
+
+    monkeypatch.setattr(refresh, "ensure_database", fake_ensure)
+    monkeypatch.setattr(refresh, "reset_mgi_service", lambda: None)
+
+    records: list[tuple[str, dict[str, Any]]] = []
+
+    class _Logger:
+        def info(self, event: str, **k: Any) -> None:
+            records.append((event, k))
+
+        def warning(self, *a: Any, **k: Any) -> None: ...
+
+    await refresh.bootstrap_data(MgiDataConfig(), _Logger())
+
+    event, fields = records[-1]
+    assert event == "mgi_data_ready"
+    blob = repr(fields)
+    assert str(secret_dir) not in blob
+    assert "some-user" not in blob
+    assert fields.get("db_file") == "mgi.sqlite"
+
+
 def test_refresh_scheduler_disabled_returns_none() -> None:
     class _Logger:
         def info(self, *a: Any, **k: Any) -> None: ...

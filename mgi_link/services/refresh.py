@@ -26,7 +26,8 @@ async def bootstrap_data(config: MgiDataConfig, logger: Any) -> None:
     try:
         path = await asyncio.to_thread(ensure_database, config)
         reset_mgi_service()
-        logger.info("mgi_data_ready", db_path=str(path))
+        # Log the filename only: the absolute path can expose local usernames.
+        logger.info("mgi_data_ready", db_file=path.name)
     except (MgiError, DownloadError, OSError) as exc:
         logger.warning("mgi_data_bootstrap_failed", error=str(exc))
 

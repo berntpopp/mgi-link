@@ -29,7 +29,8 @@ def _build_service() -> MgiService:
         try:
             repo = MgiRepository(db_path)
         except DataUnavailableError as exc:  # pragma: no cover - corrupt db
-            logger.warning("mgi_repo_open_failed path=%s err=%s", db_path, exc)
+            # Filename only: the absolute path can expose local usernames.
+            logger.warning("mgi_repo_open_failed db_file=%s err=%s", db_path.name, exc)
     fallback: MouseMineClient | None = None
     if settings.mousemine.enable_live_fallback:
         logger.info(
