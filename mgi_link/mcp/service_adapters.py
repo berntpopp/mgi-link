@@ -14,6 +14,7 @@ from mgi_link.api.mousemine import MouseMineClient
 from mgi_link.config import settings
 from mgi_link.data.repository import MgiRepository
 from mgi_link.exceptions import DataUnavailableError
+from mgi_link.redaction import redact_url
 from mgi_link.services.mgi_service import MgiService
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,9 @@ def _build_service() -> MgiService:
             logger.warning("mgi_repo_open_failed path=%s err=%s", db_path, exc)
     fallback: MouseMineClient | None = None
     if settings.mousemine.enable_live_fallback:
-        logger.info("mgi_live_fallback_enabled base_url=%s", settings.mousemine.base_url)
+        logger.info(
+            "mgi_live_fallback_enabled base_url=%s", redact_url(settings.mousemine.base_url)
+        )
         fallback = MouseMineClient(settings.mousemine)
     return MgiService(repo, fallback=fallback)
 

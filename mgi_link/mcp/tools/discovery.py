@@ -14,6 +14,7 @@ from mgi_link.mcp.envelope import McpErrorContext, run_mcp_tool
 from mgi_link.mcp.next_commands import cmd
 from mgi_link.mcp.schemas import CAPABILITIES_SCHEMA, DIAGNOSTICS_SCHEMA
 from mgi_link.mcp.service_adapters import get_mgi_service
+from mgi_link.redaction import redact_url
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -74,7 +75,8 @@ def register_discovery_tools(mcp: FastMCP) -> None:
             payload["build"] = build_info()
             payload["live_fallback"] = {
                 "enabled": settings.mousemine.enable_live_fallback,
-                "base_url": settings.mousemine.base_url,
+                # Redacted: an operator-configured URL may embed credentials/tokens.
+                "base_url": redact_url(settings.mousemine.base_url),
             }
             payload["_meta"] = {
                 "next_commands": [cmd("resolve_marker", query="Wt1")]

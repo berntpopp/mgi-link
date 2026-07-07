@@ -158,6 +158,20 @@ async def test_diagnostics_reports_live_fallback(facade: Any, structured: Any) -
     assert payload["live_fallback"]["enabled"] is False
 
 
+async def test_diagnostics_redacts_base_url_secrets(
+    facade: Any, structured: Any, monkeypatch: Any
+) -> None:
+    """A credential-bearing MouseMine URL must never surface in diagnostics."""
+    from mgi_link.config import settings
+
+    monkeypatch.setattr(settings.mousemine, "base_url", "https://user:pass@mm.internal?token=x")
+    payload = structured(await facade.call_tool("get_diagnostics", {}))
+    base_url = payload["live_fallback"]["base_url"]
+    for secret in ("user", "pass", "token"):
+        assert secret not in base_url
+    assert base_url == "https://mm.internal"
+
+
 async def test_identity_tools_data_unavailable_when_cold_no_fallback(
     cold_facade: Any, structured: Any
 ) -> None:
