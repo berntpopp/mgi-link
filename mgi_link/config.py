@@ -41,6 +41,10 @@ PRIMARY_REPORT_KEY = "genepheno"
 
 DEFAULT_MOUSEMINE_URL = "https://www.mousemine.org/mousemine/service"
 
+#: Non-personal project contact advertised in outbound User-Agent headers when
+#: no operator mailbox is configured. Never default to a personal email.
+PROJECT_CONTACT_URL = "https://github.com/berntpopp/mgi-link"
+
 
 class MgiDataConfig(BaseModel):
     """Local data store: bulk MGI reports -> built SQLite index."""
@@ -64,7 +68,7 @@ class MgiDataConfig(BaseModel):
         description="HTTP timeout (seconds) for downloading an MGI bulk report.",
     )
     user_agent: str = Field(
-        default=f"mgi-link/{__version__} (+https://github.com/berntpopp/mgi-link)",
+        default=f"mgi-link/{__version__} (+{PROJECT_CONTACT_URL})",
         description="User-Agent sent to informatics.jax.org.",
     )
     auto_bootstrap: bool = Field(
@@ -142,8 +146,12 @@ class MouseMineConfig(BaseModel):
         description="MouseMine InterMine web-service base URL.",
     )
     contact_email: str = Field(
-        default="bernt.popp@charite.de",
-        description="Contact email embedded in the User-Agent for MouseMine.",
+        default="",
+        description=(
+            "Optional operator contact email embedded in the MouseMine User-Agent. "
+            "Empty by default (a non-personal project URL is advertised instead); "
+            "set a monitored mailbox to give MGI/MouseMine a way to reach you."
+        ),
     )
     timeout: int = Field(
         default=30,
@@ -173,8 +181,11 @@ class MouseMineConfig(BaseModel):
 
     @property
     def user_agent(self) -> str:
-        """User-Agent string with a contact mailbox."""
-        return f"mgi-link/{__version__} (mailto:{self.contact_email})"
+        """User-Agent string; a project URL unless an operator mailbox is set."""
+        contact = (
+            f"mailto:{self.contact_email}" if self.contact_email else f"+{PROJECT_CONTACT_URL}"
+        )
+        return f"mgi-link/{__version__} ({contact})"
 
     @field_validator("base_url")
     @classmethod
