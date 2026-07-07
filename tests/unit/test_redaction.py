@@ -10,7 +10,7 @@ import pytest
 
 from mgi_link.redaction import redact_url
 
-_SECRET_URL = "https://user:pass@example.test?token=x"
+_SECRET_URL = "https://user:pass@example.test?token=x"  # noqa: S105 - test fixture, not a secret
 
 
 def test_redact_strips_userinfo_query_and_fragment() -> None:
