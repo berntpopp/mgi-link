@@ -4,6 +4,24 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-07-07
+
+### Security
+
+- Disabled CORS credentials on this unauthenticated backend (it holds no
+  cookies/session) and added a startup guard that rejects the
+  credentials-with-wildcard-origin footgun.
+- Redacted URL secrets (userinfo, query, fragment) before the MouseMine
+  `base_url` is echoed in the `get_diagnostics` payload or written to the
+  live-fallback log.
+- Removed the personal maintainer email from the default MouseMine
+  `User-Agent`; a non-personal project URL is advertised unless an operator
+  explicitly configures a contact mailbox
+  (`MGI_LINK_MOUSEMINE__CONTACT_EMAIL`).
+- Stopped logging the absolute database path on startup/refresh and on the
+  corrupt-db warning (it could expose local usernames / directory layout);
+  the database filename is logged instead.
+
 ### Changed
 
 - Per-call research-use disclaimer (`unsafe_for_clinical_use`) now emitted in
