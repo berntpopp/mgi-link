@@ -36,6 +36,16 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("mgi-link shutting down")
 
 
+def _assert_cors_safe(*, allow_credentials: bool, origins: list[str]) -> None:
+    """Reject the credentials-with-wildcard CORS footgun at startup.
+
+    A wildcard origin combined with credentials is forbidden by the Fetch
+    standard and would broadcast this unauthenticated backend to any site.
+    """
+    if allow_credentials and "*" in origins:
+        raise RuntimeError("Insecure CORS: allow_credentials=True with wildcard '*' origin")
+
+
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(
@@ -48,10 +58,14 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Unauthenticated backend: it holds no cookies/session, so credentials are
+    # meaningless. Keep the existing method list (GET serves /health and /).
+    allow_credentials = False
+    _assert_cors_safe(allow_credentials=allow_credentials, origins=settings.cors_origins)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_credentials=True,
+        allow_credentials=allow_credentials,
         allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["*"],
     )
