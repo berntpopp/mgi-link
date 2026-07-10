@@ -6,6 +6,7 @@ import httpx
 import pytest
 import respx
 
+from mgi_link.api.mousemine import MouseMineClient
 from mgi_link.config import MouseMineConfig
 from mgi_link.exceptions import RateLimitError, ServiceUnavailableError
 
@@ -176,6 +177,36 @@ def test_network_error_raises_service_unavailable(client) -> None:
     respx.get(_RESULTS).mock(side_effect=httpx.ConnectError("boom"))
     with pytest.raises(ServiceUnavailableError):
         client.get_marker("MGI:1")
+
+
+@respx.mock
+def test_mousemine_redirect_is_not_followed() -> None:
+    config = MouseMineConfig(base_url=_BASE, max_retries=0, rate_limit_per_s=0.1)
+    target = respx.get("https://evil.example/query").mock(
+        return_value=httpx.Response(200, json={"results": []})
+    )
+    respx.get(_RESULTS).mock(
+        return_value=httpx.Response(302, headers={"Location": "https://evil.example/query"})
+    )
+    client = MouseMineClient(config)
+    try:
+        with pytest.raises(ServiceUnavailableError, match="redirect"):
+            client.get_marker("MGI:1")
+        assert target.called is False
+    finally:
+        client.close()
+
+
+@respx.mock
+def test_mousemine_redirect_without_location_is_rejected() -> None:
+    config = MouseMineConfig(base_url=_BASE, max_retries=0, rate_limit_per_s=0.1)
+    respx.get(_RESULTS).mock(return_value=httpx.Response(302))
+    client = MouseMineClient(config)
+    try:
+        with pytest.raises(ServiceUnavailableError, match="redirect"):
+            client.get_marker("MGI:1")
+    finally:
+        client.close()
 
 
 def test_close_closes_client(client) -> None:

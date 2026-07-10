@@ -11,6 +11,9 @@ a rebuild.
 from __future__ import annotations
 
 import json
+import os
+import tempfile
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -100,10 +103,33 @@ def _int_or_none(value: str | None) -> int | None:
         return None
 
 
-def _stream_to_file(response: httpx.Response, path: Path) -> None:
-    with path.open("wb") as handle:
-        for chunk in response.iter_bytes(_CHUNK_SIZE):
-            handle.write(chunk)
+def _stream_to_file(
+    response: httpx.Response,
+    path: Path,
+    *,
+    max_bytes: int,
+    max_seconds: float,
+) -> None:
+    content_length = _int_or_none(response.headers.get("Content-Length"))
+    if content_length is not None and content_length > max_bytes:
+        raise DownloadError(f"download Content-Length {content_length} exceeded {max_bytes} bytes")
+
+    fd, tmp_name = tempfile.mkstemp(dir=path.parent, suffix=".download.tmp")
+    tmp_path = Path(tmp_name)
+    started = time.monotonic()
+    written = 0
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            for chunk in response.iter_bytes(_CHUNK_SIZE):
+                written += len(chunk)
+                if written > max_bytes:
+                    raise DownloadError(f"download exceeded {max_bytes} bytes")
+                if time.monotonic() - started > max_seconds:
+                    raise DownloadError(f"download exceeded {max_seconds:g} seconds")
+                handle.write(chunk)
+        os.replace(tmp_path, path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 def download_file(
@@ -131,7 +157,7 @@ def download_file(
 
     try:
         with (
-            httpx.Client(follow_redirects=True, timeout=config.download_timeout) as client,
+            httpx.Client(follow_redirects=False, timeout=config.download_timeout) as client,
             client.stream("GET", url, headers=headers) as response,
         ):
             if response.status_code == httpx.codes.NOT_MODIFIED:
@@ -142,11 +168,21 @@ def download_file(
                     last_modified=headers.get("If-Modified-Since"),
                     not_modified=True,
                 )
+            if response.is_redirect:
+                raise DownloadError(
+                    f"GET {url} returned unexpected redirect {response.status_code}",
+                    status_code=response.status_code,
+                )
             response.raise_for_status()
             etag = response.headers.get("ETag")
             last_modified = response.headers.get("Last-Modified")
             content_length = _int_or_none(response.headers.get("Content-Length"))
-            _stream_to_file(response, dest)
+            _stream_to_file(
+                response,
+                dest,
+                max_bytes=config.max_download_bytes,
+                max_seconds=config.max_download_seconds,
+            )
     except httpx.HTTPStatusError as exc:
         raise DownloadError(
             f"GET {url} failed: {exc.response.status_code}",

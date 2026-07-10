@@ -70,7 +70,7 @@ class MouseMineClient:
             base_url=config.base_url,
             timeout=config.timeout,
             headers={"User-Agent": config.user_agent},
-            follow_redirects=True,
+            follow_redirects=False,
         )
         self._min_interval = 1.0 / config.rate_limit_per_s if config.rate_limit_per_s > 0 else 0.0
         self._last = 0.0
@@ -102,6 +102,10 @@ class MouseMineClient:
                 if attempt < self._config.max_retries:
                     time.sleep(_BACKOFF_BASE * (2**attempt))
                 continue
+            if resp.is_redirect:
+                raise ServiceUnavailableError(
+                    f"MouseMine returned unexpected redirect {resp.status_code}."
+                )
             if resp.status_code == 429:
                 if attempt < self._config.max_retries:
                     time.sleep(_BACKOFF_BASE * (2**attempt))

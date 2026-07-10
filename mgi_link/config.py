@@ -67,6 +67,22 @@ class MgiDataConfig(BaseModel):
         le=1800,
         description="HTTP timeout (seconds) for downloading an MGI bulk report.",
     )
+    max_download_bytes: int = Field(
+        default=1 << 30,
+        gt=0,
+        description=(
+            "Maximum report size; the largest report measured below 512 MiB on "
+            "2026-07-10. Override for verified larger upstream artifacts."
+        ),
+    )
+    max_download_seconds: float = Field(
+        default=1800.0,
+        gt=0,
+        description=(
+            "Maximum elapsed seconds while streaming one report; downloads measured "
+            "below 900 seconds on 2026-07-10."
+        ),
+    )
     user_agent: str = Field(
         default=f"mgi-link/{__version__} (+{PROJECT_CONTACT_URL})",
         description="User-Agent sent to informatics.jax.org.",
