@@ -25,6 +25,45 @@ if TYPE_CHECKING:
     from structlog.typing import FilteringBoundLogger
 
 
+def create_unified_app() -> FastAPI:
+    """Create the shared FastAPI host with outer and native strict guards."""
+    from fastmcp.server.http import HostOriginGuardMiddleware
+
+    from mgi_link.app import create_app
+    from mgi_link.config import settings
+    from mgi_link.mcp.facade import create_mgi_mcp
+
+    fastapi_app = create_app()
+    fastapi_app.add_middleware(
+        HostOriginGuardMiddleware,
+        allowed_hosts=settings.allowed_hosts,
+        allowed_origins=settings.allowed_origins,
+        mode="strict",
+    )
+    mcp = create_mgi_mcp()
+    mcp_asgi = mcp.http_app(
+        path=settings.mcp_path,
+        stateless_http=True,
+        json_response=True,
+        host_origin_protection=True,
+        allowed_hosts=settings.allowed_hosts,
+        allowed_origins=settings.allowed_origins,
+    )
+
+    original_lifespan = fastapi_app.router.lifespan_context
+
+    @asynccontextmanager
+    async def combined_lifespan(app: FastAPI) -> AsyncIterator[None]:
+        async with AsyncExitStack() as stack:
+            await stack.enter_async_context(original_lifespan(app))
+            await stack.enter_async_context(mcp_asgi.router.lifespan_context(app))
+            yield
+
+    fastapi_app.router.lifespan_context = combined_lifespan
+    fastapi_app.mount("/", mcp_asgi)
+    return fastapi_app
+
+
 class UnifiedServerManager:
     """Orchestrate startup of mgi-link in any transport mode."""
 
@@ -38,24 +77,7 @@ class UnifiedServerManager:
         if self.logger:
             self.logger.info("Starting unified server", host=host, port=port, mcp_path="/mcp")
 
-        from mgi_link.app import app as fastapi_app
-        from mgi_link.config import settings
-        from mgi_link.mcp.facade import create_mgi_mcp
-
-        mcp = create_mgi_mcp()
-        mcp_asgi = mcp.http_app(path=settings.mcp_path, stateless_http=True, json_response=True)
-
-        original_lifespan = fastapi_app.router.lifespan_context
-
-        @asynccontextmanager
-        async def combined_lifespan(app: FastAPI) -> AsyncIterator[None]:
-            async with AsyncExitStack() as stack:
-                await stack.enter_async_context(original_lifespan(app))
-                await stack.enter_async_context(mcp_asgi.router.lifespan_context(app))
-                yield
-
-        fastapi_app.router.lifespan_context = combined_lifespan
-        fastapi_app.mount("/", mcp_asgi)
+        fastapi_app = create_unified_app()
 
         config = uvicorn.Config(
             app=fastapi_app, host=host, port=port, log_config=None, lifespan="on"
