@@ -15,10 +15,11 @@ import json
 import logging
 from typing import Any
 
+from fastmcp.exceptions import ValidationError as FastMCPValidationError
 from fastmcp.server.middleware.middleware import CallNext, Middleware, MiddlewareContext
 from fastmcp.tools.tool import ToolResult
 from mcp.types import CallToolRequestParams, TextContent
-from pydantic import ValidationError
+from pydantic import ValidationError as PydanticValidationError
 
 from mgi_link.mcp.arg_help import (
     describe_constraints,
@@ -65,7 +66,12 @@ class ArgValidationMiddleware(Middleware):
 
         try:
             result = await call_next(context)
-        except ValidationError as exc:
+        except FastMCPValidationError as exc:
+            cause = exc.__cause__
+            if not isinstance(cause, PydanticValidationError):
+                raise
+            return self._error_result(name, valid, schema, cause)
+        except PydanticValidationError as exc:
             return self._error_result(name, valid, schema, exc)
 
         if (
@@ -82,7 +88,7 @@ class ArgValidationMiddleware(Middleware):
         name: str,
         valid: list[str],
         schema: dict[str, Any],
-        exc: ValidationError,
+        exc: PydanticValidationError,
     ) -> ToolResult:
         first = exc.errors(include_url=False)[0]
         loc = ".".join(str(p) for p in first.get("loc", ())) or "input"

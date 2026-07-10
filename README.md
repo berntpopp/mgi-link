@@ -57,6 +57,11 @@ make mcp-serve    # run the stdio MCP server
 make test         # run the test suite
 ```
 
+HTTP deployments enforce exact Host and Origin allowlists. Configure
+`MGI_LINK_ALLOWED_HOSTS` as a JSON list containing the public reverse-proxy
+hostname in addition to loopback defaults; `MGI_LINK_ALLOWED_ORIGINS` defaults
+to `[]`, which permits requests without an `Origin` header.
+
 Register with Claude:
 
 ```bash

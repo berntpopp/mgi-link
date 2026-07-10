@@ -231,6 +231,14 @@ class ServerSettings(BaseSettings):
         description="Server transport mode.",
     )
     mcp_path: str = Field(default="/mcp", description="MCP endpoint path.")
+    allowed_hosts: list[str] = Field(
+        default=["localhost", "127.0.0.1", "::1"],
+        description="Exact Host header values accepted by the request guard.",
+    )
+    allowed_origins: list[str] = Field(
+        default=[],
+        description="Browser Origin values accepted by the request guard.",
+    )
 
     cors_origins: list[str] = Field(
         default=["http://localhost:3000", "http://127.0.0.1:3000"],
@@ -261,13 +269,21 @@ class ServerSettings(BaseSettings):
         """Ensure the MCP path starts with a forward slash."""
         return v if v.startswith("/") else f"/{v}"
 
-    @field_validator("cors_origins", mode="before")
+    @field_validator("allowed_hosts", "allowed_origins", "cors_origins", mode="before")
     @classmethod
-    def parse_cors_origins(cls, v: Any) -> list[str]:
-        """Parse CORS origins from a comma-separated string or list."""
+    def parse_string_list(cls, v: Any) -> list[str]:
+        """Parse string lists from a comma-separated value or list."""
         if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
+            return [item.strip() for item in v.split(",") if item.strip()]
         return list(v) if v else []
+
+    @field_validator("allowed_hosts")
+    @classmethod
+    def reject_wildcard_host(cls, v: list[str]) -> list[str]:
+        """Require exact hosts; pattern syntax makes the boundary ambiguous."""
+        if any(any(marker in host for marker in "*?[]") for host in v):
+            raise ValueError("wildcard patterns are not allowed in allowed_hosts")
+        return v
 
 
 settings = ServerSettings()
