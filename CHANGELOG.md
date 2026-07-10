@@ -4,6 +4,22 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-10
+
+### Security
+
+- Enforce exact configurable Host and Origin allowlists across every HTTP
+  route, with safe loopback defaults, wildcard rejection, explicit production
+  proxy hosts, and native FastMCP protection in depth. FastMCP is upgraded to
+  3.4.4 while preserving structured argument-validation error envelopes.
+
+### Changed (BREAKING)
+
+- Host and Origin admission is now default-deny outside the configured
+  loopback values. Non-loopback and reverse-proxy deployments must list their
+  exact public names in `MGI_LINK_ALLOWED_HOSTS` and browser origins, when
+  used, in `MGI_LINK_ALLOWED_ORIGINS`.
+
 ## [0.3.3] - 2026-07-10
 
 ### Security
