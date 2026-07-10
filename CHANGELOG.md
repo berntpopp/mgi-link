@@ -4,6 +4,14 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-07-10
+
+### Security
+
+- Harden MGI and MouseMine acquisition with redirect rejection, configurable
+  size and time limits, same-directory atomic replacement, and preservation of
+  the previous valid report on transfer failure.
+
 ## [0.3.2] - 2026-07-07
 
 ### Security
