@@ -4,6 +4,23 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-07-11
+
+### Security
+
+- Guard FastMCP-core not-found reflection: an unknown tool name, unknown/malformed
+  resource URI, or unknown prompt name is no longer reflected — neither the
+  caller-supplied text nor its control/zero-width/bidi/NUL code points — into any
+  caller-visible field (structured_content and the TextContent mirror), the JSON-RPC
+  error frame, or any log record at any level. Adds a layered guard
+  (`mgi_link/mcp/notfound_guard.py`): a registry preflight returning a fixed,
+  name-free `not_found` envelope (`is_error=True`, no `_meta.tool` echo); a
+  URI-free `on_read_resource` boundary; a protocol-handler backstop covering the
+  unknown-tool return path and the unknown-prompt echo; and a marker-based
+  validation-log scrub filter attached to FastMCP's own non-propagating handlers.
+  Research use only. (Response-Envelope Standard v1.1, error-message-sanitation
+  fast-follow; non-breaking — error content only.)
+
 ## [0.5.1] - 2026-07-11
 
 ### Security
