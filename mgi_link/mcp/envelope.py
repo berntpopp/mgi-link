@@ -365,6 +365,37 @@ def build_arg_error_envelope(
     )
 
 
+def build_fixed_error_envelope(
+    *,
+    error_code: str,
+    message: str,
+    recovery_action: str,
+) -> dict[str, Any]:
+    """Fixed, caller-echo-free error envelope for failures that never bind to a tool.
+
+    Used by the FastMCP-core not-found guard for an unknown tool name / resource URI
+    / prompt name, so the caller-supplied (attacker-controllable) value is never
+    reflected back. ``message`` is a fixed server-authored constant; ``_meta.tool``
+    is deliberately OMITTED (the requested name is caller-controlled and code-point
+    stripping does NOT neutralise injection prose). A discovery ``next_command`` and
+    the research-use disclaimer are included, and the whole-envelope code-point
+    backstop runs as belt-and-braces.
+    """
+    envelope: dict[str, Any] = {
+        "success": False,
+        "error_code": error_code,
+        "message": sanitize_message(message),
+        "retryable": error_code in _RETRYABLE,
+        "recovery_action": recovery_action,
+        "_meta": {
+            "request_id": _request_id(),
+            "next_commands": [cmd("get_server_capabilities")],
+            **_UNSAFE_FOR_CLINICAL_USE_META,
+        },
+    }
+    return _sanitize_envelope(envelope)
+
+
 async def run_mcp_tool(
     tool_name: str,
     call: Callable[[], Awaitable[dict[str, Any]]],
