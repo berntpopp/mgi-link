@@ -21,6 +21,7 @@ from mgi_link.mcp.envelope import (
     build_arg_error_envelope,
     run_mcp_tool,
 )
+from mgi_link.mcp.untrusted_content import UntrustedTextLimitError
 
 
 async def test_success_injects_meta() -> None:
@@ -42,6 +43,7 @@ async def test_success_injects_meta() -> None:
         (RateLimitError(), "rate_limited"),
         (DownloadError("net"), "upstream_unavailable"),
         (McpToolError(error_code="internal_error", message="x"), "internal_error"),
+        (UntrustedTextLimitError("too many objects"), "response_limit_exceeded"),
     ],
 )
 async def test_error_classification(exc: Exception, code: str) -> None:
@@ -52,6 +54,22 @@ async def test_error_classification(exc: Exception, code: str) -> None:
     assert out["success"] is False
     assert out["error_code"] == code
     assert out["_meta"]["next_commands"]  # always present
+
+
+async def test_untrusted_text_limit_error_is_typed_not_internal() -> None:
+    """A v1.1 limit breach must surface as its own typed code, never internal_error."""
+
+    async def call() -> dict[str, Any]:
+        raise UntrustedTextLimitError("untrusted object count 300 exceeds ceiling 200")
+
+    out = await run_mcp_tool(
+        "search_phenotype_terms", call, context=McpErrorContext("search_phenotype_terms")
+    )
+    assert out["success"] is False
+    assert out["error_code"] == "response_limit_exceeded"
+    assert out["error_code"] != "internal_error"
+    assert out["retryable"] is False
+    assert out["recovery_action"] == "reformulate_input"
 
 
 async def test_invalid_input_surfaces_field_and_allowed() -> None:

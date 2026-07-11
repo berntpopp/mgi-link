@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from mgi_link.mcp.untrusted_content import UntrustedText, fence_untrusted_text
+
 RESPONSE_MODES: tuple[str, ...] = ("minimal", "compact", "standard", "full")
 DEFAULT_RESPONSE_MODE = "compact"
 
@@ -105,3 +107,20 @@ def shape_phenotype_term(row: dict[str, Any], mode: str) -> dict[str, Any]:
 def shape_phenotype_genotype(row: dict[str, Any]) -> dict[str, Any]:
     """Per-genotype phenotype row (full view): the complete annotation."""
     return row
+
+
+def fence_mp_definition(
+    record: dict[str, Any], *, source: str, record_id: str
+) -> tuple[dict[str, Any], UntrustedText | None]:
+    """Fence a MP term/hit's ``definition`` into a typed ``UntrustedText`` object.
+
+    Response-Envelope Standard v1.1: externally sourced MP-ontology prose is
+    never returned as a bare string. Returns the reshaped record plus the fenced
+    object (``None`` when there was no definition to fence) so the caller can
+    batch limits enforcement across a whole response.
+    """
+    definition = record.get("definition")
+    if not definition:
+        return record, None
+    fenced = fence_untrusted_text(definition, source=source, record_id=record_id)
+    return {**record, "definition": fenced.model_dump(mode="json")}, fenced

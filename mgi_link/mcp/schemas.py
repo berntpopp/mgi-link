@@ -38,6 +38,30 @@ _BOOL = {"type": "boolean"}
 _ARR = {"type": "array"}
 _OBJ = {"type": "object", "additionalProperties": True}
 
+# Response-Envelope Standard v1.1: externally sourced free text (MP-ontology
+# definitions) is emitted as this typed object, never a bare string. ``kind`` is
+# a real schema literal (JSON Schema's `const`, the same shape pydantic emits for
+# `Literal["untrusted_text"]`), not a hand-written string field.
+_UNTRUSTED_TEXT = {
+    "type": "object",
+    "additionalProperties": True,
+    "properties": {
+        "kind": {"type": "string", "const": "untrusted_text"},
+        "text": _STR,
+        "provenance": {
+            "type": "object",
+            "additionalProperties": True,
+            "properties": {
+                "source": _STR,
+                "record_id": _STR,
+                "retrieved_at": _STR,
+            },
+        },
+        "raw_sha256": _STR,
+    },
+}
+_UNTRUSTED_TEXT_NULL = {"anyOf": [_UNTRUSTED_TEXT, {"type": "null"}]}
+
 CAPABILITIES_SCHEMA = _envelope(
     server=_STR,
     server_version=_STR,
@@ -146,14 +170,30 @@ ORTHOLOG_SCHEMA = _envelope(
 MP_TERM_SCHEMA = _envelope(
     mp_id=_STR,
     name=_STR,
-    definition=_STR_NULL,
+    definition=_UNTRUSTED_TEXT_NULL,
     parents=_ARR,
     children=_ARR,
     top_level_systems=_ARR,
 )
 
+_MP_SEARCH_RESULT = {
+    "type": "object",
+    "additionalProperties": True,
+    "properties": {
+        "mp_id": _STR,
+        "name": _STR,
+        "definition": _UNTRUSTED_TEXT_NULL,
+        "score": _NUM,
+    },
+}
+
 MP_SEARCH_SCHEMA = _envelope(
-    query=_STR, total=_INT, returned=_INT, limit=_INT, truncated=_BOOL, results=_ARR
+    query=_STR,
+    total=_INT,
+    returned=_INT,
+    limit=_INT,
+    truncated=_BOOL,
+    results={"type": "array", "items": _MP_SEARCH_RESULT},
 )
 
 FIND_MARKERS_SCHEMA = _envelope(

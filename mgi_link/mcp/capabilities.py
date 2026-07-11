@@ -227,6 +227,7 @@ def build_capabilities() -> dict[str, Any]:
             "data_unavailable",
             "rate_limited",
             "upstream_unavailable",
+            "response_limit_exceeded",
             "internal_error",
         ],
         "limits": {

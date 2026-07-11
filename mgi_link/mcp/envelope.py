@@ -28,6 +28,7 @@ from mgi_link.exceptions import (
     WithdrawnEntryError,
 )
 from mgi_link.mcp.next_commands import cmd, default_error_next_commands, withdrawn_recovery
+from mgi_link.mcp.untrusted_content import UntrustedTextLimitError
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +75,12 @@ def _classify(exc: BaseException) -> tuple[str, str]:
     """Return ``(error_code, client_safe_message)`` for an exception."""
     if isinstance(exc, McpToolError):
         return exc.error_code, exc.message
+    # Response-Envelope Standard v1.1 §Limits: exceeding an untrusted-text ceiling
+    # is an explicit typed execution error, never a silent omission or a generic
+    # internal_error. Checked before the ValueError/Pydantic fallthrough because
+    # UntrustedTextLimitError subclasses ValueError.
+    if isinstance(exc, UntrustedTextLimitError):
+        return "response_limit_exceeded", _safe_message(exc)
     if isinstance(exc, NotFoundError):  # WithdrawnEntryError subclasses this
         return "not_found", _safe_message(exc)
     if isinstance(exc, AmbiguousQueryError):
@@ -96,7 +103,9 @@ def _classify(exc: BaseException) -> tuple[str, str]:
 def _recovery_action(error_code: str) -> str:
     if error_code in _RETRYABLE:
         return "retry_backoff"
-    if error_code in {"invalid_input", "not_found", "ambiguous_query"}:
+    # response_limit_exceeded: retrying the same request yields the same oversized
+    # payload, so the recovery is to narrow the input (e.g. a smaller `limit`).
+    if error_code in {"invalid_input", "not_found", "ambiguous_query", "response_limit_exceeded"}:
         return "reformulate_input"
     return "switch_tool"
 

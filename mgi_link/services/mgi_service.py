@@ -27,9 +27,11 @@ from mgi_link.identifiers import (
     normalize_mgi_id,
     normalize_mp_id,
 )
+from mgi_link.mcp.untrusted_content import UntrustedText, enforce_untrusted_text_limits
 from mgi_link.services.marker_provider import MarkerProvider
 from mgi_link.services.pagination import page_fields
 from mgi_link.services.shaping import (
+    fence_mp_definition,
     shape_allele,
     shape_marker,
     shape_phenotype_genotype,
@@ -43,6 +45,10 @@ if TYPE_CHECKING:
 
 _MAX_CANDIDATES = 25
 _INDEX_NOT_BUILT = "The local MGI index is not built yet. Run `mgi-link-data build`."
+_UNTRUSTED_TEXT_SOURCE = "mgi"
+# search_phenotype_terms' own `limit` maximum (Field(..., le=200)); a search-scale
+# object-count ceiling, not the fence module's bare default (128).
+_MP_SEARCH_MAX_OBJECTS = 200
 
 
 class MgiService:
@@ -360,27 +366,52 @@ class MgiService:
     # -- ontology --------------------------------------------------------------
 
     def get_mp_term(self, mp_id: str) -> dict[str, Any]:
-        """Return an MP ontology term (id, name, definition, parents, children)."""
+        """Return an MP ontology term (id, name, definition, parents, children).
+
+        ``definition`` is externally sourced MP-ontology prose (untrusted content):
+        it is fenced into a typed ``UntrustedText`` object (Response-Envelope
+        Standard v1.1) rather than returned as a bare string.
+        """
         normalized = normalize_mp_id((mp_id or "").strip())
         if not normalized:
             raise InvalidInputError("mp_id must be an MP term id like MP:0005367.", field="mp_id")
         term = self.repo.get_mp_term(normalized)
         if term is None:
             raise NotFoundError(f"No MP term {normalized}.")
+        term, fenced = fence_mp_definition(
+            term, source=_UNTRUSTED_TEXT_SOURCE, record_id=normalized
+        )
+        enforce_untrusted_text_limits([fenced] if fenced else [])
         return term
 
     def search_phenotype_terms(self, query: str, *, limit: int = 25) -> dict[str, Any]:
-        """FTS over MP term names/definitions."""
+        """FTS over MP term names/definitions.
+
+        Each hit's ``definition`` is externally sourced MP-ontology prose
+        (untrusted content), fenced into a typed ``UntrustedText`` object; the
+        object-count ceiling tracks this tool's own ``limit`` maximum (200), not
+        the fence module's bare default, so a full-width search never raises.
+        """
         raw = (query or "").strip()
         if not raw:
             raise InvalidInputError("query must be a non-empty search string.", field="query")
         limit = max(1, min(limit, 200))
         hits = self.repo.search_mp(raw, limit=limit)
         total = self.repo.count_mp(raw)
+        fenced_hits: list[dict[str, Any]] = []
+        fenced_objects: list[UntrustedText] = []
+        for hit in hits:
+            hit, fenced = fence_mp_definition(
+                hit, source=_UNTRUSTED_TEXT_SOURCE, record_id=hit["mp_id"]
+            )
+            fenced_hits.append(hit)
+            if fenced:
+                fenced_objects.append(fenced)
+        enforce_untrusted_text_limits(fenced_objects, max_objects=_MP_SEARCH_MAX_OBJECTS)
         return {
             "query": raw,
             **page_fields(total=total, returned=len(hits), limit=limit),
-            "results": hits,
+            "results": fenced_hits,
         }
 
     def find_markers_by_phenotype(
