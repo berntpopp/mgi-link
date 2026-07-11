@@ -4,6 +4,37 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-11
+
+### Changed (BREAKING)
+
+- Response-Envelope Standard v1.1 untrusted-content fencing: `get_mp_term`'s
+  `/definition` and `search_phenotype_terms`' `/results/*/definition` — both
+  externally sourced Mammalian Phenotype (MP) ontology prose — are now emitted
+  as the typed `untrusted_text` object (`kind`/`text`/`provenance`/
+  `raw_sha256`) instead of a bare string, so MCP hosts can never confuse
+  retrieved ontology prose with instructions. This is a breaking reshape (no
+  legacy string field is kept alongside the typed object); callers reading
+  `definition` as a string must update to read `definition.text`.
+- Added `mgi_link/mcp/untrusted_content.py` (the fleet's shared fencing
+  primitive: `fence_untrusted_text`, `UntrustedText`, plus a v1.1 limits guard,
+  `enforce_untrusted_text_limits`, that raises `UntrustedTextLimitError` on a
+  ceiling breach rather than silently truncating).
+
+### Added
+
+- New typed error code `response_limit_exceeded` (non-retryable,
+  `recovery_action: reformulate_input`): a v1.1 untrusted-text limit breach now
+  surfaces as its own explicit execution error in the MCP envelope instead of a
+  generic `internal_error`, and is listed in `get_server_capabilities`.
+
+### Security
+
+- Defense in depth: upstream MP-ontology definitions are typed as data at the
+  MCP serialization boundary, closing off prompt-injection vectors carried in
+  externally sourced free text. Research use only; not clinical decision
+  support.
+
 ## [0.4.0] - 2026-07-10
 
 ### Security
