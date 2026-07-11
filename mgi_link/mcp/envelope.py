@@ -87,7 +87,7 @@ _PUBLIC_MESSAGE: dict[str, str] = {
     ),
     "not_found": "No matching MGI record was found for the request.",
     "ambiguous_query": "The query matched multiple MGI records. See candidates to disambiguate.",
-    "invalid_input": "The request arguments were invalid. See field, allowed_values, and hint.",
+    "invalid_input": "The request arguments were invalid. See field and allowed_values.",
     "data_unavailable": "The local MGI database is not available.",
     "rate_limited": "MouseMine rate limit hit. Retry shortly.",
     "upstream_unavailable": "The MouseMine upstream is temporarily unavailable.",
@@ -96,8 +96,18 @@ _PUBLIC_MESSAGE: dict[str, str] = {
 _WITHDRAWN_MESSAGE = "The requested MGI record is withdrawn or obsolete. See replaced_by."
 
 _MGI_ID_RE = re.compile(r"^MGI:\d+$")
-_STATUS_RE = re.compile(r"^[A-Za-z][A-Za-z _-]{0,63}$")
 _SYMBOL_TYPES = frozenset({"current", "synonym"})
+# CLOSED enum of MGI withdrawal statuses (no spaces/prose can pass). Anything else
+# (incl. attacker prose from a live fallback) is dropped rather than surfaced.
+_WITHDRAWN_STATUSES = frozenset({"withdrawn", "split", "merged", "deleted", "obsolete", "replaced"})
+# A declared tool/service parameter name: a lowercase identifier, never free text.
+_DECLARED_FIELD_RE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+# Redaction placeholder for a caller-invented (undeclared) argument name.
+_REDACTED_FIELD = "<unknown>"
+# An allowed_values entry: an identifier / value token (enum member, range like
+# "1..200", an id). It has NO whitespace, so it cannot carry a multi-word
+# instruction; anything else (incl. a free-text label or injected prose) is dropped.
+_ALLOWED_VALUE_RE = re.compile(r"^[A-Za-z0-9][\w.:/<>()+-]{0,63}$")
 
 
 def _sanitize_tree(value: Any) -> Any:
@@ -155,10 +165,38 @@ def _valid_records(records: Any) -> list[dict[str, Any]]:
 
 
 def _valid_status(status: Any) -> str | None:
-    """Return a withdrawn-status token only if it is a simple word, else ``None``."""
-    if isinstance(status, str) and _STATUS_RE.match(status):
-        return status
-    return None
+    """Return the withdrawn-status ONLY if it is a member of the closed enum.
+
+    ``WithdrawnEntryError.status`` can originate from the live MouseMine fallback,
+    so it is validated against a fixed vocabulary (never a permissive grammar that
+    would let prose / a bidi-laden string through); a non-member is dropped.
+    """
+    return status if status in _WITHDRAWN_STATUSES else None
+
+
+def _declared_field(name: Any) -> str:
+    """Return a declared parameter name, or the fixed ``<unknown>`` redaction.
+
+    The offending ``field`` on an invalid-input error must be a declared,
+    grammar-validated parameter identifier -- never a caller-invented argument
+    NAME echoed verbatim (a single-token instruction survives code-point
+    stripping). Anything not matching the identifier grammar is redacted.
+    """
+    if isinstance(name, str) and _DECLARED_FIELD_RE.match(name):
+        return name
+    return _REDACTED_FIELD
+
+
+def _validated_allowed_values(allowed: Any) -> list[str]:
+    """Keep only whitespace-free identifier/value tokens from an allowed-values list.
+
+    An ``allowed_values`` list is a closed set of enum members / value tokens. A
+    free-text label or injected prose (which has whitespace) is dropped, since
+    code-point stripping alone would leave a multi-word instruction intact.
+    """
+    if not isinstance(allowed, list):
+        return []
+    return [item for item in allowed if isinstance(item, str) and _ALLOWED_VALUE_RE.match(item)]
 
 
 def _classify(exc: BaseException) -> tuple[str, str]:
@@ -218,14 +256,18 @@ def _error_envelope(exc: BaseException, context: McpErrorContext) -> dict[str, A
         },
     }
     if isinstance(exc, InvalidInputError):
-        # field/allowed_values/hint are server-authored; the whole-envelope pass
-        # code-point-strips them (no interpolation of caller/upstream prose here).
+        # Build each structured field from a VALIDATED value, never verbatim:
+        # - field: a declared, grammar-validated parameter name (else redacted).
+        # - allowed_values: only whitespace-free identifier/value tokens (a
+        #   free-text label or injected prose is dropped); omitted if none survive.
+        # The exception's free-text ``hint`` is NOT surfaced (it cannot be
+        # grammar-validated, and copying an exception string verbatim would let
+        # prose through). The whole-envelope pass strips code points as a backstop.
         if exc.field is not None:
-            envelope["field"] = exc.field
-        if exc.allowed is not None:
-            envelope["allowed_values"] = exc.allowed
-        if exc.hint is not None:
-            envelope["hint"] = exc.hint
+            envelope["field"] = _declared_field(exc.field)
+        allowed_values = _validated_allowed_values(exc.allowed)
+        if allowed_values:
+            envelope["allowed_values"] = allowed_values
     if isinstance(exc, WithdrawnEntryError):
         # Structured fields may come from the live fallback: validate identifiers,
         # drop non-conforming ones; the status is constrained to a simple token.
@@ -268,16 +310,15 @@ def build_arg_error_envelope(
     argument, so ``allowed_values`` carries the valid range/enum (not the list of
     argument *names*) and the message states the constraint.
     """
-    # ``loc`` for a *missing* / invalid-*value* failure is a server-defined schema
-    # parameter name (safe to echo). For an *unexpected* argument it is the
-    # caller-invented NAME (arbitrary text) -- never echo that into the message
-    # (a single-token instruction survives code-point stripping); it is only kept,
-    # code-point-stripped, in the structured ``field`` value. safe_loc is stripped
-    # for the ``field`` in every branch; the whole-envelope pass strips the rest.
-    safe_loc = sanitize_message(loc)
+    # Echo the offending argument name ONLY when it is a DECLARED parameter (a
+    # member of the tool's own parameter set); a caller-invented / unexpected
+    # argument NAME is redacted to a fixed placeholder and never echoed into the
+    # message or the ``field`` value (a single-token instruction survives
+    # code-point stripping). ``suggestion`` is a declared name (from did_you_mean).
+    field_value = loc if loc in valid_params else _REDACTED_FIELD
     if constraints is not None:
         allowed, human = constraints
-        message = f"Invalid value for argument `{safe_loc}` of {tool_name}: {human}."
+        message = f"Invalid value for argument `{field_value}` of {tool_name}: {human}."
         return _sanitize_envelope(
             {
                 "success": False,
@@ -285,7 +326,7 @@ def build_arg_error_envelope(
                 "message": message,
                 "retryable": False,
                 "recovery_action": "reformulate_input",
-                "field": safe_loc,
+                "field": field_value,
                 "allowed_values": allowed,
                 "hint": signature,
                 "_meta": {
@@ -297,11 +338,11 @@ def build_arg_error_envelope(
             }
         )
     if error_type == "missing_argument":
-        head = f"Missing required argument `{safe_loc}` for {tool_name}."
+        head = f"Missing required argument `{field_value}` for {tool_name}."
     elif error_type == "unexpected_keyword_argument":
         head = f"Unknown argument for {tool_name}."  # never echo the caller's name
     else:
-        head = f"Invalid value for argument `{safe_loc}` of {tool_name}."
+        head = f"Invalid value for argument `{field_value}` of {tool_name}."
     dym = f" Did you mean `{suggestion}`?" if suggestion else ""
     message = f"{head}{dym} Valid argument names are listed in allowed_values."
     return _sanitize_envelope(
@@ -311,7 +352,7 @@ def build_arg_error_envelope(
             "message": message,
             "retryable": False,
             "recovery_action": "reformulate_input",
-            "field": safe_loc,
+            "field": field_value,
             "allowed_values": valid_params,
             "hint": signature,
             "_meta": {

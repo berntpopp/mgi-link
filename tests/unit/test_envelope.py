@@ -79,7 +79,8 @@ async def test_invalid_input_surfaces_field_and_allowed() -> None:
     out = await run_mcp_tool("get_marker_phenotypes", call)
     assert out["field"] == "mp_system"
     assert out["allowed_values"] == ["a", "b"]
-    assert out["hint"] == "use a system"
+    # The exception's free-text hint is NOT surfaced (cannot be grammar-validated).
+    assert "hint" not in out
 
 
 async def test_ambiguous_candidates_chain() -> None:

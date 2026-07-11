@@ -13,7 +13,6 @@ import contextlib
 import random
 from typing import TYPE_CHECKING, Any
 
-from mgi_link.exceptions import DownloadError, MgiError
 from mgi_link.ingest.builder import ensure_database, rebuild
 from mgi_link.mcp.service_adapters import reset_mgi_service
 
@@ -28,8 +27,11 @@ async def bootstrap_data(config: MgiDataConfig, logger: Any) -> None:
         reset_mgi_service()
         # Log the filename only: the absolute path can expose local usernames.
         logger.info("mgi_data_ready", db_file=path.name)
-    except (MgiError, DownloadError, OSError) as exc:
-        # Log the exception TYPE only: str(exc) can embed a local path / download URL.
+    except Exception as exc:
+        # Catch EVERYTHING (incl. a UnicodeDecodeError over a hostile bulk report,
+        # whose str(exc) can embed the offending bytes + bidi/NUL): an uncaught
+        # exception would escape into raw framework logging. Log the TYPE only --
+        # never str(exc), which can embed a local path / download URL / decoded prose.
         logger.warning("mgi_data_bootstrap_failed", error_type=type(exc).__name__)
 
 
@@ -45,7 +47,10 @@ async def _refresh_loop(config: MgiDataConfig, logger: Any) -> None:
                 logger.info("mgi_data_refreshed", release=result.meta.release)
             else:
                 logger.debug("mgi_data_unchanged")
-        except (MgiError, DownloadError, OSError) as exc:
+        except Exception as exc:
+            # As in bootstrap: catch everything (incl. decode errors over hostile
+            # bytes) and log the exception TYPE only, never str(exc). CancelledError
+            # is a BaseException, so the loop can still be cancelled cleanly.
             logger.warning("mgi_data_refresh_failed", error_type=type(exc).__name__)
 
 
