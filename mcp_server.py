@@ -24,7 +24,7 @@ def main() -> None:
         from mgi_link.logging_config import configure_logging
         from mgi_link.server_manager import UnifiedServerManager
     except Exception as exc:
-        print(f"ERROR: mgi_link import failed: {exc}", file=sys.stderr)
+        print(f"ERROR: mgi_link import failed ({type(exc).__name__})", file=sys.stderr)
         sys.exit(1)
 
     logger = configure_logging()
@@ -34,7 +34,7 @@ def main() -> None:
     except KeyboardInterrupt:
         logger.info("MCP stdio server shutdown requested")
     except Exception as exc:
-        logger.error("MCP stdio server error", error=str(exc))
+        logger.error("MCP stdio server error", error_type=type(exc).__name__)
         sys.exit(1)
 
 

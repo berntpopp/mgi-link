@@ -28,7 +28,6 @@ from mgi_link.mcp.arg_help import (
     tool_signature,
 )
 from mgi_link.mcp.envelope import build_arg_error_envelope
-from mgi_link.mcp.untrusted_content import sanitize_message
 
 logger = logging.getLogger(__name__)
 
@@ -110,11 +109,11 @@ class ArgValidationMiddleware(Middleware):
             suggestion=suggestion,
             constraints=constraints,
         )
-        # ``loc`` is the caller-supplied argument name; strip forbidden code points
-        # before it reaches the log sink (defense-in-depth for the PII/log invariant).
-        logger.warning(
-            "mcp_arg_error tool=%s loc=%s type=%s", name, sanitize_message(loc), error_type
-        )
+        # Log stable metadata ONLY. ``loc`` for an unexpected argument is the
+        # caller-invented NAME (arbitrary text/prose that code-point stripping does
+        # NOT neutralise), so it is never written to the log sink; a boolean
+        # (was it a known schema parameter?) carries the diagnostic signal instead.
+        logger.warning("mcp_arg_error tool=%s type=%s known_arg=%s", name, error_type, loc in valid)
         return ToolResult(
             structured_content=envelope,
             content=[TextContent(type="text", text=json.dumps(envelope))],

@@ -2,14 +2,44 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
-from mgi_link.identifiers import infer_xref_source, looks_like_mgi_id, looks_like_symbol
+from mgi_link.identifiers import (
+    infer_xref_source,
+    looks_like_mgi_id,
+    looks_like_mp_id,
+    looks_like_symbol,
+    normalize_mp_id,
+)
+
+_HGNC_RE = re.compile(r"^HGNC:\d+$", re.IGNORECASE)
 
 
 def cmd(tool: str, **arguments: Any) -> dict[str, Any]:
     """One ready-to-call next step."""
     return {"tool": tool, "arguments": arguments}
+
+
+def _safe_recovery_query(value: str) -> str | None:
+    """Return the caller value ONLY if it matches an exact identifier grammar.
+
+    An error-path recovery command echoes the failed query back into a
+    ``next_commands`` argument. Free-form query text can carry injection prose
+    (which code-point stripping does NOT remove), so it is echoed ONLY when it
+    provably conforms to a marker/MP identifier or gene-symbol grammar (no spaces,
+    no forbidden code points); otherwise it is omitted and the caller falls back
+    to a generic ``get_server_capabilities`` recovery.
+    """
+    text = (value or "").strip()
+    if (
+        looks_like_mgi_id(text)
+        or looks_like_mp_id(text)
+        or looks_like_symbol(text)
+        or _HGNC_RE.match(text)
+    ):
+        return text
+    return None
 
 
 def widen_cmd(tool: str, base_args: dict[str, Any], total: int, ceiling: int) -> dict[str, Any]:
@@ -22,14 +52,18 @@ def default_error_next_commands(
 ) -> list[dict[str, Any]]:
     """A sensible recovery step for any error lacking an explicit fallback."""
     if tool in ("resolve_marker", "get_marker", "get_marker_alleles", "get_marker_phenotypes"):
-        value = str(arguments.get("query", ""))
-        source = infer_xref_source(value)
-        if source:
-            return [cmd("resolve_marker", query=value), cmd("search_markers", query=value)]
-        if value and (looks_like_symbol(value) or not looks_like_mgi_id(value)):
-            return [cmd("search_markers", query=value), cmd("get_server_capabilities")]
+        # Echo the failed query into a recovery command ONLY if it is a valid
+        # identifier/symbol shape; a free-form (prose) query is omitted.
+        value = _safe_recovery_query(str(arguments.get("query", "")))
+        if value is not None:
+            if infer_xref_source(value):
+                return [cmd("resolve_marker", query=value), cmd("search_markers", query=value)]
+            if looks_like_symbol(value) or not looks_like_mgi_id(value):
+                return [cmd("search_markers", query=value), cmd("get_server_capabilities")]
     if tool in ("get_mp_term", "find_markers_by_phenotype"):
-        value = str(arguments.get("mp_id", ""))
+        # normalize_mp_id returns the canonical MP:NNNNNNN form or None (rejecting
+        # any non-conforming/prose mp_id), so the echoed query is always validated.
+        value = normalize_mp_id(str(arguments.get("mp_id", "")))
         return (
             [cmd("search_phenotype_terms", query=value)]
             if value

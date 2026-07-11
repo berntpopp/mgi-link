@@ -106,16 +106,26 @@ def enforce_untrusted_text_limits(
 MAX_MESSAGE_CHARS = 280
 
 
+def strip_forbidden_codepoints(text: str) -> str:
+    """Remove the fence's forbidden control/zero-width/bidi/NUL code points.
+
+    The uncapped primitive used by the recursive whole-envelope backstop, which
+    must not truncate structured leaves (``allowed_values``, ``hint``). Reuses the
+    untrusted-text fence's ``FORBIDDEN_CODEPOINTS`` set (never redefined).
+    """
+    return "".join(char for char in text if ord(char) not in FORBIDDEN_CODEPOINTS)
+
+
 def sanitize_message(text: str) -> str:
     """Strip the fence's forbidden control/zero-width/bidi code points + length-cap.
 
-    A defensive backstop applied to EVERY caller-visible message/error string so a
+    A defensive backstop applied to caller-visible message/error strings so a
     hostile upstream (or a caller-influenced 4xx/5xx body) can never smuggle
     control, zero-width, bidirectional, or NUL code points into an error frame,
-    diagnostics, or any status message. Reuses the untrusted-text fence's
-    ``FORBIDDEN_CODEPOINTS`` set. Caller-visible messages are server-authored
-    guidance data; attacker-influenceable upstream bodies are additionally kept
-    out of them at the source (severed, not merely sanitized).
+    diagnostics, or any status message. Caller-visible messages are FIXED,
+    server-authored guidance data; attacker-influenceable prose (caller input,
+    upstream response bodies) is kept out of them at the source (severed to a
+    fixed message / validated identifier), not merely sanitized -- code-point
+    stripping alone does NOT neutralise injection prose.
     """
-    clean = "".join(char for char in text if ord(char) not in FORBIDDEN_CODEPOINTS)
-    return clean[:MAX_MESSAGE_CHARS]
+    return strip_forbidden_codepoints(text)[:MAX_MESSAGE_CHARS]

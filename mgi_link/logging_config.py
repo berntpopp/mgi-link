@@ -26,6 +26,30 @@ def _add_static_fields(_logger: Any, _name: str, event_dict: dict[str, Any]) -> 
     return event_dict
 
 
+class _FastMCPArgScrubFilter(logging.Filter):
+    """Scrub caller argument values FastMCP logs on an argument-validation failure.
+
+    On a bad tool call FastMCP logs the full pydantic error at WARNING -- which
+    embeds the raw call arguments (any injected code points / prose) -- *before*
+    our middleware maps it to a safe envelope. This filter replaces such records
+    with fixed text and clears ``args``/``exc_info``/``exc_text`` so no
+    caller-controlled input reaches the log sink (M3 no-PII-in-logs invariant).
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Redact FastMCP argument-validation records in place; keep everything else."""
+        try:
+            message = record.getMessage()
+        except Exception:  # a malformed record still must not leak its raw args
+            message = str(record.msg)
+        if "Invalid arguments for tool" in message or "validation error" in message.lower():
+            record.msg = "tool argument validation failed (details suppressed)"
+            record.args = ()
+            record.exc_info = None
+            record.exc_text = None
+        return True
+
+
 def configure_stdlib_logging() -> None:
     """Route stdlib logging to stderr and tame noisy third-party loggers."""
     root_logger = logging.getLogger()
@@ -36,6 +60,8 @@ def configure_stdlib_logging() -> None:
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(logging.Formatter("%(message)s"))
     handler.setLevel(getattr(logging, settings.log_level))
+    scrub = _FastMCPArgScrubFilter()
+    handler.addFilter(scrub)
     root_logger.addHandler(handler)
 
     is_debug = settings.log_level == "DEBUG"
@@ -48,6 +74,17 @@ def configure_stdlib_logging() -> None:
         "mcp": "INFO" if is_debug else "WARNING",
     }.items():
         logging.getLogger(name).setLevel(getattr(logging, level))
+
+    # FastMCP logs the raw pydantic arg-validation error (embedding caller input)
+    # BEFORE our middleware maps it to a safe envelope, and its logger does NOT
+    # propagate to the root handler (it owns its own handlers). Attach the scrub
+    # filter to the fastmcp/mcp loggers AND their handlers so the caller input is
+    # cleared on whichever sink emits the record.
+    for name in ("fastmcp", "mcp"):
+        third_party = logging.getLogger(name)
+        third_party.addFilter(scrub)
+        for third_party_handler in third_party.handlers:
+            third_party_handler.addFilter(scrub)
 
 
 def configure_structlog() -> None:

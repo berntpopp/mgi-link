@@ -29,7 +29,8 @@ async def bootstrap_data(config: MgiDataConfig, logger: Any) -> None:
         # Log the filename only: the absolute path can expose local usernames.
         logger.info("mgi_data_ready", db_file=path.name)
     except (MgiError, DownloadError, OSError) as exc:
-        logger.warning("mgi_data_bootstrap_failed", error=str(exc))
+        # Log the exception TYPE only: str(exc) can embed a local path / download URL.
+        logger.warning("mgi_data_bootstrap_failed", error_type=type(exc).__name__)
 
 
 async def _refresh_loop(config: MgiDataConfig, logger: Any) -> None:
@@ -45,7 +46,7 @@ async def _refresh_loop(config: MgiDataConfig, logger: Any) -> None:
             else:
                 logger.debug("mgi_data_unchanged")
         except (MgiError, DownloadError, OSError) as exc:
-            logger.warning("mgi_data_refresh_failed", error=str(exc))
+            logger.warning("mgi_data_refresh_failed", error_type=type(exc).__name__)
 
 
 def start_refresh_scheduler(config: MgiDataConfig, logger: Any) -> asyncio.Task[None] | None:

@@ -68,7 +68,7 @@ async def _run() -> None:
     except KeyboardInterrupt:
         logger.info("Server shutdown requested")
     except Exception as exc:
-        logger.error("Server error", error=str(exc))
+        logger.error("Server error", error_type=type(exc).__name__)
         sys.exit(1)
     finally:
         await manager.shutdown()
