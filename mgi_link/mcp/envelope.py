@@ -28,7 +28,7 @@ from mgi_link.exceptions import (
     WithdrawnEntryError,
 )
 from mgi_link.mcp.next_commands import cmd, default_error_next_commands, withdrawn_recovery
-from mgi_link.mcp.untrusted_content import UntrustedTextLimitError
+from mgi_link.mcp.untrusted_content import UntrustedTextLimitError, sanitize_message
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,12 @@ def _request_id() -> str:
 
 
 def _safe_message(exc: BaseException) -> str:
-    return (str(exc) or exc.__class__.__name__)[:280]
+    # Strip the fence's forbidden control/zero-width/bidi/NUL code points (and
+    # length-cap) from every caller-visible message. Exceptions surfaced through
+    # here carry server-authored guidance or a caller's own echoed identifier;
+    # attacker-influenceable / path-carrying exceptions are additionally SEVERED
+    # to fixed strings in _classify (never routed through here).
+    return sanitize_message(str(exc) or exc.__class__.__name__)
 
 
 def _classify(exc: BaseException) -> tuple[str, str]:
@@ -88,15 +93,23 @@ def _classify(exc: BaseException) -> tuple[str, str]:
     if isinstance(exc, InvalidInputError):
         return "invalid_input", _safe_message(exc)
     if isinstance(exc, DataUnavailableError):
-        return "data_unavailable", _safe_message(exc)
+        # The exception text can embed the local DB filesystem path AND a raw
+        # sqlite str(exc) (see data/repository.py). Never surface either: a fixed,
+        # detail-free message is returned instead. The operator-facing build hint
+        # and the path stay in server logs, not the caller-visible frame.
+        return "data_unavailable", "The local MGI database is not available."
     if isinstance(exc, RateLimitError):
         return "rate_limited", "MouseMine rate limit hit. Retry shortly."
     if isinstance(exc, ServiceUnavailableError | DownloadError):
         return "upstream_unavailable", "The MouseMine upstream is temporarily unavailable."
     if isinstance(exc, PydanticValidationError):
+        # The pydantic ``msg`` can echo the rejected input value (e.g. a custom
+        # validator's ValueError), so it is NOT surfaced. Only a stable reason with
+        # the field name is returned; ``loc`` may itself carry a caller-controlled
+        # field name, so it is code-point-stripped.
         first = exc.errors()[0]
         loc = ".".join(str(p) for p in first["loc"]) or "input"
-        return "invalid_input", f"Invalid input -- `{loc}`: {first['msg']}"
+        return "invalid_input", f"Invalid input for `{sanitize_message(loc)}`."
     return "internal_error", "An internal error occurred. The request was not completed."
 
 
@@ -115,7 +128,9 @@ def _error_envelope(exc: BaseException, context: McpErrorContext) -> dict[str, A
     envelope: dict[str, Any] = {
         "success": False,
         "error_code": error_code,
-        "message": message,
+        # Defensive backstop: no forbidden code points reach the caller whatever
+        # the classify path (incl. McpToolError bodies authored in tools).
+        "message": sanitize_message(message),
         "retryable": error_code in _RETRYABLE,
         "recovery_action": _recovery_action(error_code),
         "_meta": {
@@ -168,16 +183,21 @@ def build_arg_error_envelope(
     argument, so ``allowed_values`` carries the valid range/enum (not the list of
     argument *names*) and the message states the constraint.
     """
+    # ``loc`` is the caller-supplied argument NAME (unknown/invalid), so it is
+    # caller-controlled: code-point-strip it before echoing into the message or the
+    # ``field`` value so a hostile argument name can never smuggle control/zero-width/
+    # bidi/NUL code points into the caller-visible frame.
+    safe_loc = sanitize_message(loc)
     if constraints is not None:
         allowed, human = constraints
-        message = f"Invalid value for argument `{loc}` of {tool_name}: {human}."
+        message = f"Invalid value for argument `{safe_loc}` of {tool_name}: {human}."
         return {
             "success": False,
             "error_code": "invalid_input",
-            "message": message[:280],
+            "message": sanitize_message(message),
             "retryable": False,
             "recovery_action": "reformulate_input",
-            "field": loc,
+            "field": safe_loc,
             "allowed_values": allowed,
             "hint": signature,
             "_meta": {
@@ -188,20 +208,20 @@ def build_arg_error_envelope(
             },
         }
     if error_type == "missing_argument":
-        head = f"Missing required argument `{loc}` for {tool_name}."
+        head = f"Missing required argument `{safe_loc}` for {tool_name}."
     elif error_type == "unexpected_keyword_argument":
-        head = f"Unknown argument `{loc}` for {tool_name}."
+        head = f"Unknown argument `{safe_loc}` for {tool_name}."
     else:
-        head = f"Invalid value for argument `{loc}` of {tool_name}."
+        head = f"Invalid value for argument `{safe_loc}` of {tool_name}."
     dym = f" Did you mean `{suggestion}`?" if suggestion else ""
     message = f"{head}{dym} Valid argument names are listed in allowed_values."
     return {
         "success": False,
         "error_code": "invalid_input",
-        "message": message[:280],
+        "message": sanitize_message(message),
         "retryable": False,
         "recovery_action": "reformulate_input",
-        "field": loc,
+        "field": safe_loc,
         "allowed_values": valid_params,
         "hint": signature,
         "_meta": {

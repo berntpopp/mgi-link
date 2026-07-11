@@ -123,7 +123,11 @@ class MouseMineClient:
             data = resp.json()
             results = data.get("results", [])
             return [list(r) for r in results]
-        raise ServiceUnavailableError(str(last) if last else "MouseMine request failed.")
+        # Sever the transport exception text: str(last) is a network/httpx error
+        # (never an upstream response body), but a fixed message keeps any transport
+        # detail out of the caller-visible frame and out of logs. The chained cause
+        # is preserved for server-side debugging only.
+        raise ServiceUnavailableError("MouseMine request failed.") from last
 
     # -- MarkerProvider --------------------------------------------------------
 
