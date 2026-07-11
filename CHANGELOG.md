@@ -4,6 +4,15 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-07-11
+
+### Security
+
+- Defense in depth: caller-visible error messages and structured fields are built
+  from fixed/validated values (no upstream/exception prose), sanitized of
+  control/zero-width/bidi/NUL code points; the local DB path, upstream error text,
+  and decode failures are no longer echoed or logged raw. Research use only.
+
 ## [0.5.0] - 2026-07-11
 
 ### Changed (BREAKING)
