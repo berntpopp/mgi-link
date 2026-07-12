@@ -18,6 +18,7 @@ TIER = os.environ.get("CONFORMANCE_TIER", "stateless")
 
 
 @pytest.mark.skipif(not MCP_URL, reason="set CONFORMANCE_MCP_URL to run the live probe")
+@pytest.mark.integration
 def test_mcp_transport_standard_v1() -> None:
     report = run_probe(MCP_URL, expected_name=EXPECTED_NAME, tier=TIER)
     assert report.conformant, "non-conformant:\n  " + "\n  ".join(report.failed)

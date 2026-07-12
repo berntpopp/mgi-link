@@ -37,7 +37,7 @@ jobs:
         run: uv run pytest tests/conformance/test_transport_v1.py -v
       - name: Logs on failure
         if: failure()
-        run: make docker-logs || docker compose -f docker/docker-compose.yml logs
+        run: make docker-logs-tail || true
       - name: Teardown
         if: always()
         run: make docker-down || true

@@ -3,7 +3,7 @@
         typecheck test test-fast test-unit test-integration test-cov \
         check ci-local precommit clean \
         data data-refresh data-status dev mcp-serve \
-        docker-build docker-up docker-down docker-logs docker-url info
+        docker-build docker-up docker-down docker-logs docker-logs-tail docker-url info
 
 DOCKER_COMPOSE := $(shell if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then echo "docker compose"; elif command -v docker-compose >/dev/null 2>&1; then echo "docker-compose"; else echo "docker compose"; fi)
 COMPOSE := $(DOCKER_COMPOSE) -f docker/docker-compose.yml $(shell [ -f docker/.env ] && echo "--env-file docker/.env")
@@ -96,6 +96,9 @@ docker-down: ## Stop Docker stack
 
 docker-logs: ## Follow Docker logs
 	$(COMPOSE) logs -f
+
+docker-logs-tail: ## Print the most recent 200 Docker log lines
+	$(COMPOSE) logs --tail=200
 
 docker-url: ## Print the MCP URL (host port the container is published on)
 	@hostport=$$($(COMPOSE) port mgi-link 8000 2>/dev/null); \
