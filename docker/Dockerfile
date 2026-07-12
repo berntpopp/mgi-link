@@ -23,8 +23,11 @@ ENV VIRTUAL_ENV="/opt/venv" \
 WORKDIR /home/app/web
 COPY uv.lock pyproject.toml README.md ./
 
-RUN pip install --upgrade pip uv && \
-    uv sync --frozen --no-dev --active --no-install-project
+# Bootstrap uv from a digest-pinned image instead of a floating PyPI install,
+# so the build path has no unpinned, mutable installer dependency (F-19).
+COPY --from=ghcr.io/astral-sh/uv:0.8.7@sha256:1e26f9a868360eeb32500a35e05787ffff3402f01a8dc8168ef6aee44aef0aab /uv /usr/local/bin/uv
+
+RUN uv sync --frozen --no-dev --active --no-install-project
 
 
 FROM python:3.12-slim@sha256:423ed6ab25b1921a477529254bfeeabf5855151dc2c3141699a1bfc852199fbf AS production
