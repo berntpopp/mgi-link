@@ -4,6 +4,14 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-07-12
+
+### Security
+
+- Replaced the mutable uv installer bootstrap in the Docker builder with a
+  digest-pinned image copy, so production builds are reproducible from the
+  reviewed container digest. Research use only.
+
 ## [0.5.2] - 2026-07-11
 
 ### Security
