@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
+import socket
 from pathlib import Path
-from typing import Any
+from typing import Any, NoReturn
 
 import pytest
 
@@ -14,6 +15,32 @@ from mgi_link.ingest.builder import build_database
 from mgi_link.services.mgi_service import MgiService
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
+
+
+def _network_denied(*_args: object, **_kwargs: object) -> NoReturn:
+    """Fail unit tests that would otherwise make an unmocked network request."""
+    raise AssertionError("unit tests must mock outbound network access")
+
+
+class _NetworkDeniedSocket(socket.socket):
+    """Socket subclass that rejects outbound connections but keeps local socketpair support."""
+
+    def connect(self, address: object) -> None:
+        _network_denied(address)
+
+    def connect_ex(self, address: object) -> int:
+        _network_denied(address)
+
+
+@pytest.fixture(autouse=True)
+def deny_network_for_unit_tests(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Block sockets in unit tests while leaving integration tests explicitly opt-in."""
+    if request.node.get_closest_marker("integration") is not None:
+        return
+    monkeypatch.setattr(socket, "create_connection", _network_denied)
+    monkeypatch.setattr(socket, "socket", _NetworkDeniedSocket)
 
 
 def _structured(result: Any) -> dict[str, Any]:

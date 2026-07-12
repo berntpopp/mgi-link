@@ -12,12 +12,32 @@ from pathlib import Path
 
 import pytest
 
+from mgi_link.config import MgiDataConfig
 from mgi_link.data.repository import MgiRepository
+from mgi_link.exceptions import DownloadError
+from mgi_link.ingest.downloader import download_bulk
 from mgi_link.services.mgi_service import MgiService
 
 pytestmark = pytest.mark.integration
 
 _DB = Path(__file__).resolve().parents[2] / "data" / "mgi.sqlite"
+
+
+def test_live_markers_download_has_an_explicit_timeout(tmp_path: Path) -> None:
+    """Exercise one real bulk report only in the opt-in integration suite."""
+    config = MgiDataConfig(
+        data_dir=tmp_path,
+        download_timeout=10,
+        max_download_seconds=20.0,
+        max_download_bytes=128 << 20,
+    )
+    try:
+        download = download_bulk(config, keys=["markers"])
+    except DownloadError as exc:
+        pytest.skip(f"Live MGI bulk download unavailable: {exc}")
+    result = download.results["markers"]
+    assert result.path is not None
+    assert result.path.exists()
 
 
 @pytest.fixture(scope="module")

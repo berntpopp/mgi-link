@@ -8,7 +8,7 @@ import pytest
 from typer.testing import CliRunner
 
 from mgi_link.config import REPORT_FILENAMES, MgiDataConfig
-from mgi_link.ingest import cli
+from mgi_link.ingest import builder, cli
 from mgi_link.ingest.downloader import BulkDownload, DownloadResult
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
@@ -29,6 +29,9 @@ def patched(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> MgiDataConfig:
         return bulk
 
     monkeypatch.setattr(cli, "download_bulk", fake_download_bulk)
+    # ``refresh`` delegates to ``builder.rebuild``, whose global dependency is
+    # ``builder.download_bulk`` rather than the CLI import used by ``build``.
+    monkeypatch.setattr(builder, "download_bulk", fake_download_bulk)
     return config
 
 
