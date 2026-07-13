@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "dockerfile": "docker/Dockerfile",
+  "target": "production",
+  "platform": "linux/amd64",
+  "service": {
+    "compose_files": [
+      "docker/docker-compose.yml",
+      "docker/docker-compose.prod.yml"
+    ],
+    "name": "mgi-link",
+    "container_port": 8000,
+    "health_path": "/health",
+    "mcp_path": "/mcp",
+    "startup_timeout_seconds": 300
+  },
+  "data": {
+    "mode": "upstream-live",
+    "image_allowlist": [
+      "home/app/web/mgi_link/data/__init__.py",
+      "home/app/web/mgi_link/data/repository.py",
+      "home/app/web/mgi_link/data/repository_ontology.py",
+      "home/app/web/mgi_link/data/schema.sql"
+    ],
+    "egress_allowlist": [
+      "www.informatics.jax.org",
+      "www.mousemine.org"
+    ],
+    "release_tag": "observed-2026.07.13",
+    "digest": "sha256:1efd2fe47b73ce84f486eff9a8d3ad9262be98e3c944cda9460672f33cfac717",
+    "reproducible_rollback": false
+  },
+  "runtime_cache": {
+    "path": "/data",
+    "eviction": "operator-managed persistent SQLite cache rebuilt from the declared upstream live sources",
+    "deletable_without_authoritative_data_loss": true
+  },
+  "definitions": {
+    "contract": "data-bound"
+  },
+  "smoke": {
+    "profile": "prepared-live-fixture"
+  }
+}
