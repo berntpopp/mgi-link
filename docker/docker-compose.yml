@@ -7,10 +7,9 @@ services:
       dockerfile: docker/Dockerfile
       target: production
       args:
-        # Stamp build provenance into the image so get_server_capabilities/_meta
-        # can report which build answered. Defaults keep an unset env harmless.
-        MGI_LINK_GIT_SHA: ${MGI_LINK_GIT_SHA:-unknown}
-        MGI_LINK_BUILT_AT: ${MGI_LINK_BUILT_AT:-}
+        APP_VERSION: ${APP_VERSION:-0.0.0}
+        VCS_REF: ${VCS_REF:-0000000000000000000000000000000000000000}
+        BUILD_DATE: ${BUILD_DATE:-1970-01-01T00:00:00Z}
     container_name: mgi-link
     # Dev/local only — loopback-bound (127.0.0.1) so copying this file to a
     # server never publishes the unauthenticated backend on the public IP
@@ -32,7 +31,7 @@ services:
       MGI_LINK_ALLOWED_HOSTS: '["localhost","127.0.0.1","::1"]'
       MGI_LINK_LOG_LEVEL: INFO
       MGI_LINK_LOG_FORMAT: json
-      MGI_LINK_DATA__DATA_DIR: /app/data
+      MGI_LINK_DATA__DATA_DIR: /data
       MGI_LINK_DATA__AUTO_BOOTSTRAP: "true"
       # Refresh is owned by cron (see docs/deployment.md). To refresh the running
       # container, run a host cron job:
@@ -40,7 +39,7 @@ services:
       MGI_LINK_DATA__REFRESH_ENABLED: "false"
     volumes:
       # Persist the built ~73MB SQLite index across container restarts.
-      - mgi-data:/app/data
+      - mgi-data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "-H", "Host: localhost", "http://127.0.0.1:8000/health"]
       interval: 30s
@@ -83,11 +82,15 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
       target: production
+      args:
+        APP_VERSION: ${APP_VERSION:-0.0.0}
+        VCS_REF: ${VCS_REF:-0000000000000000000000000000000000000000}
+        BUILD_DATE: ${BUILD_DATE:-1970-01-01T00:00:00Z}
     entrypoint: ["mgi-link-data", "refresh"]
     environment:
-      MGI_LINK_DATA__DATA_DIR: /app/data
+      MGI_LINK_DATA__DATA_DIR: /data
     volumes:
-      - mgi-data:/app/data
+      - mgi-data:/data
     networks:
       - mgi-network
 

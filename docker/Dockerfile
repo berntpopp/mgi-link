@@ -30,19 +30,29 @@ COPY --from=ghcr.io/astral-sh/uv:0.8.7@sha256:1e26f9a868360eeb32500a35e05787ffff
 RUN uv sync --frozen --no-dev --active --no-install-project
 
 
-FROM python:3.12-slim@sha256:423ed6ab25b1921a477529254bfeeabf5855151dc2c3141699a1bfc852199fbf AS production
+FROM python:3.12-slim@sha256:423ed6ab25b1921a477529254bfeeabf5855151dc2c3141699a1bfc852199fbf AS prepared
 
 
-# Runtime identity. The deploy builds from a source checkout rather than pulling a
-# registry image, so there is no immutable OCI digest to pin; stamping the exact
-# commit into the image is what lets an operator prove the running container was
-# built from the revision the router's release inventory pins, instead of trusting
-# a moving `main`. VCS_REF is unprefixed on purpose: a <SERVICE>_-prefixed name
-# would land in the pydantic settings namespace.
-ARG VCS_REF=unknown
-LABEL org.opencontainers.image.source="https://github.com/berntpopp/mgi-link" \
-      org.opencontainers.image.revision="${VCS_REF}"
-ENV VCS_REF="${VCS_REF}"
+# Public release identity. Release automation supplies all three values from the
+# validated source tag/commit and build record; defaults identify a local build.
+ARG APP_VERSION=0.0.0
+ARG VCS_REF=0000000000000000000000000000000000000000
+ARG BUILD_DATE=1970-01-01T00:00:00Z
+LABEL org.opencontainers.image.title="MGI-Link" \
+      org.opencontainers.image.description="FastAPI and MCP server for Mouse Genome Informatics data" \
+      org.opencontainers.image.source="https://github.com/berntpopp/mgi-link" \
+      org.opencontainers.image.url="https://github.com/berntpopp/mgi-link" \
+      org.opencontainers.image.documentation="https://github.com/berntpopp/mgi-link#readme" \
+      org.opencontainers.image.version="${APP_VERSION}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.vendor="GeneFoundry" \
+      org.genefoundry.research-use-only="true" \
+      org.genefoundry.data-policy="code-only"
+ENV VCS_REF="${VCS_REF}" \
+    MGI_LINK_GIT_SHA="${VCS_REF}" \
+    MGI_LINK_BUILT_AT="${BUILD_DATE}"
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -52,12 +62,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     MGI_LINK_PORT=8000 \
     MGI_LINK_TRANSPORT=unified \
     MGI_LINK_MCP_PATH=/mcp \
-    MGI_LINK_DATA__DATA_DIR=/app/data \
+    MGI_LINK_DATA__DATA_DIR=/data \
     # The entrypoint builds the index before the server starts. Refresh is owned
     # by cron (see docs/deployment.md), so the in-app scheduler stays OFF.
     MGI_LINK_DATA__AUTO_BOOTSTRAP=true \
     MGI_LINK_DATA__REFRESH_ENABLED=false \
-    TMPDIR=/tmp/mgi-link
+    TMPDIR=/tmp
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
@@ -67,8 +77,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 RUN groupadd --system app && \
     useradd --system --gid app --home /home/app --create-home app && \
-    mkdir -p /tmp/mgi-link /app/data && \
-    chown -R app:app /tmp/mgi-link /app/data /home/app
+    mkdir -p /tmp /data && \
+    chown -R app:app /tmp /data /home/app
 
 COPY --from=builder /opt/venv /opt/venv
 
@@ -80,22 +90,70 @@ COPY --chown=app:app ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
 RUN /opt/venv/bin/pip install . --no-deps && chmod +x /usr/local/bin/entrypoint.sh
 
-# Stamp build provenance so get_server_capabilities/_meta can report which build
-# answered. Pass at build time, e.g.:
-#   docker build --build-arg MGI_LINK_GIT_SHA=$(git rev-parse --short HEAD) \
-#                --build-arg MGI_LINK_BUILT_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ) .
-ARG MGI_LINK_GIT_SHA=unknown
-ARG MGI_LINK_BUILT_AT
-ENV MGI_LINK_GIT_SHA=${MGI_LINK_GIT_SHA} \
-    MGI_LINK_BUILT_AT=${MGI_LINK_BUILT_AT}
+RUN rm -rf /root/.cache/pip \
+           /usr/local/lib/python*/ensurepip \
+           /usr/local/lib/python*/site-packages/pip \
+           /usr/local/lib/python*/site-packages/pip-*.dist-info \
+           /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.* \
+           /opt/venv/lib/python*/site-packages/pip \
+           /opt/venv/lib/python*/site-packages/pip-*.dist-info \
+           /opt/venv/bin/pip /opt/venv/bin/pip3 /opt/venv/bin/pip3.* \
+    && find / -xdev -type d -name __pycache__ -prune -exec rm -rf '{}' + \
+    && find / -xdev -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
+RUN find / -xdev -perm /6000 -exec chmod a-s '{}' + \
+    && test -z "$(find / -xdev -perm /6000 -print -quit)"
+RUN actual="$(find / -xdev -type f -links +1 -printf '%i %p\n' | sort -k2,2)" \
+    && expected="$(printf '%s %s\n%s %s\n' \
+         "$(stat -c '%i' /usr/bin/perl)" /usr/bin/perl \
+         "$(stat -c '%i' /usr/bin/perl5.40.1)" /usr/bin/perl5.40.1 | sort -k2,2)" \
+    && { test "$actual" = "$expected" || { printf 'unexpected hardlinks:\n%s\n' "$actual"; exit 1; }; } \
+    && rm -f /usr/bin/perl5.40.1
+
+FROM scratch AS production
+COPY --from=prepared / /
+
+ARG APP_VERSION=0.0.0
+ARG VCS_REF=0000000000000000000000000000000000000000
+ARG BUILD_DATE=1970-01-01T00:00:00Z
+LABEL org.opencontainers.image.title="MGI-Link" \
+      org.opencontainers.image.description="FastAPI and MCP server for Mouse Genome Informatics data" \
+      org.opencontainers.image.source="https://github.com/berntpopp/mgi-link" \
+      org.opencontainers.image.url="https://github.com/berntpopp/mgi-link" \
+      org.opencontainers.image.documentation="https://github.com/berntpopp/mgi-link#readme" \
+      org.opencontainers.image.version="${APP_VERSION}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.vendor="GeneFoundry" \
+      org.genefoundry.research-use-only="true" \
+      org.genefoundry.data-policy="code-only"
+ENV VCS_REF="${VCS_REF}" \
+    MGI_LINK_GIT_SHA="${VCS_REF}" \
+    MGI_LINK_BUILT_AT="${BUILD_DATE}"
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    PYTHONPATH="/home/app/web" \
+    MGI_LINK_HOST=0.0.0.0 \
+    MGI_LINK_PORT=8000 \
+    MGI_LINK_TRANSPORT=unified \
+    MGI_LINK_MCP_PATH=/mcp \
+    MGI_LINK_DATA__DATA_DIR=/data \
+    # The entrypoint builds the index before the server starts. Refresh is owned
+    # by cron (see docs/deployment.md), so the in-app scheduler stays OFF.
+    MGI_LINK_DATA__AUTO_BOOTSTRAP=true \
+    MGI_LINK_DATA__REFRESH_ENABLED=false \
+    TMPDIR=/tmp
+WORKDIR /home/app/web
 
 USER app
 
 EXPOSE 8000
 
-# The built SQLite index lives under MGI_LINK_DATA__DATA_DIR (/app/data).
+# The built SQLite index lives under MGI_LINK_DATA__DATA_DIR (/data).
 # Mount a volume there so the ~73MB index persists across container restarts.
-VOLUME ["/app/data"]
+VOLUME ["/data"]
 
 # start-period covers the entrypoint's first build (download ~33MB + ~4s build).
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=120s \

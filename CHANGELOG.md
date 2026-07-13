@@ -4,6 +4,14 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-07-13
+
+### Security
+
+- Adopt the GeneFoundry router container-release standard with SHA-pinned
+  reusable CI/release callers, typed release configuration, digest-only
+  production Compose, complete OCI labels, and code-only image content policy.
+
 ## [0.5.3] - 2026-07-12
 
 ### Security
