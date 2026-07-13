@@ -20,7 +20,11 @@
       "home/app/web/mgi_link/data/__init__.py",
       "home/app/web/mgi_link/data/repository.py",
       "home/app/web/mgi_link/data/repository_ontology.py",
-      "home/app/web/mgi_link/data/schema.sql"
+      "home/app/web/mgi_link/data/schema.sql",
+      "opt/venv/lib/python3.12/site-packages/mgi_link/data/__init__.py",
+      "opt/venv/lib/python3.12/site-packages/mgi_link/data/repository.py",
+      "opt/venv/lib/python3.12/site-packages/mgi_link/data/repository_ontology.py",
+      "opt/venv/lib/python3.12/site-packages/mgi_link/data/schema.sql"
     ],
     "egress_allowlist": [
       "www.informatics.jax.org",
