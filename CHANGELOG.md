@@ -10,7 +10,7 @@ All notable changes to mgi-link are documented here.
 
 - Re-pin the reusable container CI and container release callers to the
   corrected GeneFoundry router release standard
-  (`62e12c043dbd4745eac41dccacdee9a73306e9bd`), so the signed release evidence
+  (`86b11f7ed062ed84dfddcbd309e34da88f3dae5b`), so the signed release evidence
   states the data contract this repository actually declares. The previous
   standard hardcoded a `data-independent` contract and `{"mode":"none"}` data
   requirements, which understated this `data-bound` / `upstream-live` service in
