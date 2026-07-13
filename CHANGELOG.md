@@ -4,6 +4,16 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.5.5] - 2026-07-13
+
+### Fixed
+
+- Re-pin the reusable container CI and container release callers to the
+  corrected GeneFoundry router release standard
+  (`58d011d9c72efe90337244342fdec703f2b5b4b9`), which repairs seven latent
+  defects in the previously pinned revision that prevented the container
+  release workflow from completing. Research use only.
+
 ## [0.5.4] - 2026-07-13
 
 ### Security
