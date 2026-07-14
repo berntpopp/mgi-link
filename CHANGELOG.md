@@ -2,6 +2,8 @@
 
 All notable changes to mgi-link are documented here.
 
+## [Unreleased]
+
 ## [0.5.7] - 2026-07-14
 
 ### Changed
@@ -15,8 +17,6 @@ All notable changes to mgi-link are documented here.
   the healthcheck and its long first-boot `start_period`, networks and the `mgi-data`
   volume are all preserved, so the deployed topology and the SQLite index it carries are
   untouched.
-
-## [Unreleased]
 
 ## [0.5.6] - 2026-07-13
 
