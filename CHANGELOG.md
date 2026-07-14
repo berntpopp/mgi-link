@@ -4,6 +4,20 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.5.7] - 2026-07-14
+
+### Changed
+
+- **The NPM deployment pulls the released image instead of building from source.**
+  `docker/docker-compose.npm.yml` carried `build:`, so a deploy rebuilt the image on the
+  server even though CI had already published an attested, digest-addressable image to
+  GHCR — the released image was never consumed. It now requires `MGI_LINK_IMAGE` pinned
+  to a digest and fails closed when it is unset. Nothing else in the overlay changed:
+  `container_name` (NPM routes to it), the Compose project name (it names the volumes),
+  the healthcheck and its long first-boot `start_period`, networks and the `mgi-data`
+  volume are all preserved, so the deployed topology and the SQLite index it carries are
+  untouched.
+
 ## [0.5.6] - 2026-07-13
 
 ### Fixed
