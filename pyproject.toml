@@ -91,9 +91,6 @@ line-ending = "lf"
 "tests/**/*" = ["S101", "S104", "S110", "T20", "B011", "SIM105", "SIM108"]
 "mcp_server.py" = ["T20"]
 "scripts/**/*" = ["T20"]
-# check_readme.py is copied verbatim into every GeneFoundry repo (README Standard
-# v1). Keep it byte-identical to the router's copy; do not lint-fix it locally.
-"scripts/check_readme.py" = ["B905"]
 "mgi_link/ingest/cli.py" = ["T20"]
 
 [tool.ruff.lint.pydocstyle]
