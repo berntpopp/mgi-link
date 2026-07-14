@@ -73,8 +73,9 @@ build.
 
 All settings use the `MGI_LINK_` prefix; nested config uses `__`. The full
 reference — every variable, its default, and the three console entry points — is
-[configuration.md](configuration.md); `.env.example` is the copy-paste starting
-point.
+[configuration.md](configuration.md), whose exhaustiveness is enforced by a unit
+test against the live settings model; `.env.example` is the copy-paste starting
+point for the settings you are most likely to change.
 
 ### Behind a reverse proxy
 
@@ -83,5 +84,9 @@ HTTP deployments enforce **exact** Host and Origin allowlists on every route.
 reverse-proxy hostname** alongside the loopback defaults, or the proxied server
 will reject every request. `MGI_LINK_ALLOWED_ORIGINS` defaults to `[]`, which
 still admits non-browser MCP clients (they send no `Origin` header); add an
-origin only for a browser client. See
+origin only for a browser client. A **third**, separate list —
+`MGI_LINK_CORS_ORIGINS`, which feeds the CORS middleware — does *not* default to
+empty: it ships with the development origins `http://localhost:3000` and
+`http://127.0.0.1:3000`. Set it to `[]` on a proxied deployment unless a browser
+client needs to read responses. See
 [configuration.md](configuration.md#host--origin-allowlists-read-before-deploying-behind-a-proxy).
