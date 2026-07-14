@@ -14,7 +14,10 @@ mgi-link-data status    # print provenance of the existing DB
 
 `refresh` issues conditional GETs (ETag / Last-Modified), so when MGI hasn't
 published a new release every report returns `304` and no rebuild happens. MGI
-updates roughly weekly.
+updates roughly weekly. See [data.md](data.md) for the source reports, the
+primary-report rule, and the atomic-build guarantee.
+
+The index is **required**: the server has no data until `build` has run once.
 
 ## Cron options
 
@@ -37,9 +40,18 @@ docker compose -f docker/docker-compose.yml run --rm refresh
 ## Running the server
 
 - **Unified** (FastAPI `/health` + MCP `/mcp` in one uvicorn process):
-  `python server.py --transport unified` or `make dev`.
+  `python server.py --transport unified` or `make dev`. Console script:
+  `mgi-link`.
 - **Stdio** (for Claude Desktop / `claude mcp add`): `mgi-link-mcp` or
   `make mcp-serve`.
+
+Register the hosted deployment or a local HTTP server with Claude Code:
+
+```bash
+claude mcp add --transport http mgi-link https://mgi-link.genefoundry.org/mcp
+claude mcp add --transport http mgi-link http://127.0.0.1:8000/mcp   # local
+claude mcp add mgi-link -- uv run mgi-link-mcp                       # local, stdio
+```
 
 ## Docker
 
@@ -59,7 +71,22 @@ build.
 
 ## Configuration
 
-All settings use the `MGI_LINK_` prefix; nested config uses `__`. See
-`.env.example`. Key vars: `MGI_LINK_TRANSPORT`, `MGI_LINK_DATA__DATA_DIR`,
-`MGI_LINK_DATA__REPORTS_BASE_URL`, `MGI_LINK_DATA__AUTO_BOOTSTRAP`,
-`MGI_LINK_DATA__REFRESH_ENABLED`.
+All settings use the `MGI_LINK_` prefix; nested config uses `__`. The full
+reference — every variable, its default, and the three console entry points — is
+[configuration.md](configuration.md), whose exhaustiveness is enforced by a unit
+test against the live settings model; `.env.example` is the copy-paste starting
+point for the settings you are most likely to change.
+
+### Behind a reverse proxy
+
+HTTP deployments enforce **exact** Host and Origin allowlists on every route.
+`MGI_LINK_ALLOWED_HOSTS` must be a JSON list carrying the **public
+reverse-proxy hostname** alongside the loopback defaults, or the proxied server
+will reject every request. `MGI_LINK_ALLOWED_ORIGINS` defaults to `[]`, which
+still admits non-browser MCP clients (they send no `Origin` header); add an
+origin only for a browser client. A **third**, separate list —
+`MGI_LINK_CORS_ORIGINS`, which feeds the CORS middleware — does *not* default to
+empty: it ships with the development origins `http://localhost:3000` and
+`http://127.0.0.1:3000`. Set it to `[]` on a proxied deployment unless a browser
+client needs to read responses. See
+[configuration.md](configuration.md#host--origin-allowlists-read-before-deploying-behind-a-proxy).

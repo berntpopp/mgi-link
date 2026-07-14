@@ -4,6 +4,12 @@
 the MGI bulk data reports and serves it over a structured MCP surface. It has two
 planes.
 
+It is a sibling of `hgnc-link`, `gnomad-link`, `uniprot-link` and `gencc-link`
+and shares their architecture: a local SQLite index built from bulk reports,
+refreshed by cron (see [data.md](data.md)), served over MCP. The `mcp/` plane
+below is the scaffolding those projects hold in common — a change there is a
+fleet-wide change.
+
 ## Data plane
 
 ```
