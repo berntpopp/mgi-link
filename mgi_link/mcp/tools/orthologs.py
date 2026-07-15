@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 from mgi_link.mcp.annotations import READ_ONLY_OPEN_WORLD
 from mgi_link.mcp.envelope import McpErrorContext, run_mcp_tool
 from mgi_link.mcp.next_commands import after_diseases, after_ortholog
-from mgi_link.mcp.schemas import DISEASES_SCHEMA, ORTHOLOG_SCHEMA
 from mgi_link.mcp.service_adapters import get_mgi_service
 from mgi_link.mcp.tools._common import QueryStr, ResponseMode
 
@@ -22,7 +21,7 @@ def register_ortholog_tools(mcp: FastMCP) -> None:
         name="get_marker_ortholog",
         title="Get Marker Ortholog",
         annotations=READ_ONLY_OPEN_WORLD,
-        output_schema=ORTHOLOG_SCHEMA,
+        output_schema=None,
         tags={"ortholog", "xref"},
         description=(
             "Return the mouse<->human ortholog mapping and cross-references for a "
@@ -50,7 +49,7 @@ def register_ortholog_tools(mcp: FastMCP) -> None:
         name="get_marker_diseases",
         title="Get Marker Disease Models",
         annotations=READ_ONLY_OPEN_WORLD,
-        output_schema=DISEASES_SCHEMA,
+        output_schema=None,
         tags={"disease"},
         description=(
             "Return the human-mouse disease models associated with a marker (Disease "

@@ -74,13 +74,18 @@ class ArgValidationMiddleware(Middleware):
         except PydanticValidationError as exc:
             return self._error_result(name, valid, schema, exc)
 
-        if (
-            applied
-            and isinstance(result, ToolResult)
-            and isinstance(result.structured_content, dict)
-        ):
-            meta = result.structured_content.setdefault("_meta", {})
-            meta["argument_aliases_applied"] = [list(pair) for pair in applied]
+        if isinstance(result, ToolResult) and isinstance(result.structured_content, dict):
+            sc = result.structured_content
+            if applied:
+                meta = sc.setdefault("_meta", {})
+                meta["argument_aliases_applied"] = [list(pair) for pair in applied]
+            # Response-Envelope v1: an error envelope (success:false) returned by a
+            # tool body via run_mcp_tool MUST carry MCP isError:true so a client
+            # branching on isError sees the failure. FastMCP leaves is_error False on
+            # a plain dict return, so flip it here at the one chokepoint that wraps
+            # every tool body (the arg-binding path sets it in _error_result).
+            if sc.get("success") is False and not result.is_error:
+                return result.model_copy(update={"is_error": True})
         return result
 
     def _error_result(
@@ -114,7 +119,10 @@ class ArgValidationMiddleware(Middleware):
         # NOT neutralise), so it is never written to the log sink; a boolean
         # (was it a known schema parameter?) carries the diagnostic signal instead.
         logger.warning("mcp_arg_error tool=%s type=%s known_arg=%s", name, error_type, loc in valid)
+        # is_error=True: an argument-binding failure is an error envelope, and a
+        # client branching on isError must see it (Response-Envelope v1).
         return ToolResult(
             structured_content=envelope,
             content=[TextContent(type="text", text=json.dumps(envelope))],
+            is_error=True,
         )

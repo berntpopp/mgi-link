@@ -175,8 +175,8 @@ async def test_diagnostics_redacts_base_url_secrets(
 async def test_identity_tools_data_unavailable_when_cold_no_fallback(
     cold_facade: Any, structured: Any
 ) -> None:
-    """Both identity tools must return data_unavailable when there is no repo and no fallback."""
+    """Both identity tools return upstream_unavailable (canonical enum) when cold."""
     for tool in ("resolve_marker", "get_marker"):
         payload = structured(await cold_facade.call_tool(tool, {"query": "Wt1"}))
         assert payload["success"] is False
-        assert payload["error_code"] == "data_unavailable"
+        assert payload["error_code"] == "upstream_unavailable"

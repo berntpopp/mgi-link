@@ -39,11 +39,11 @@ async def test_success_injects_meta() -> None:
     [
         (NotFoundError("nope"), "not_found"),
         (InvalidInputError("bad", field="query"), "invalid_input"),
-        (DataUnavailableError(), "data_unavailable"),
+        (DataUnavailableError(), "upstream_unavailable"),
         (RateLimitError(), "rate_limited"),
         (DownloadError("net"), "upstream_unavailable"),
-        (McpToolError(error_code="internal_error", message="x"), "internal_error"),
-        (UntrustedTextLimitError("too many objects"), "response_limit_exceeded"),
+        (McpToolError(error_code="internal_error", message="x"), "internal"),
+        (UntrustedTextLimitError("too many objects"), "invalid_input"),
     ],
 )
 async def test_error_classification(exc: Exception, code: str) -> None:
@@ -57,7 +57,7 @@ async def test_error_classification(exc: Exception, code: str) -> None:
 
 
 async def test_untrusted_text_limit_error_is_typed_not_internal() -> None:
-    """A v1.1 limit breach must surface as its own typed code, never internal_error."""
+    """A v1.1 limit breach is closed onto the invalid_input enum (narrow the request)."""
 
     async def call() -> dict[str, Any]:
         raise UntrustedTextLimitError("untrusted object count 300 exceeds ceiling 200")
@@ -66,8 +66,8 @@ async def test_untrusted_text_limit_error_is_typed_not_internal() -> None:
         "search_phenotype_terms", call, context=McpErrorContext("search_phenotype_terms")
     )
     assert out["success"] is False
-    assert out["error_code"] == "response_limit_exceeded"
-    assert out["error_code"] != "internal_error"
+    assert out["error_code"] == "invalid_input"
+    assert out["error_code"] != "internal"
     assert out["retryable"] is False
     assert out["recovery_action"] == "reformulate_input"
 

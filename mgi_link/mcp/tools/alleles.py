@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING, Annotated, Any
 
 from pydantic import Field
 
+from mgi_link.constants import ALLELE_TYPE_ALIASES, ALLELE_TYPES
 from mgi_link.mcp.annotations import READ_ONLY_OPEN_WORLD
 from mgi_link.mcp.envelope import McpErrorContext, run_mcp_tool
 from mgi_link.mcp.next_commands import after_alleles
-from mgi_link.mcp.schemas import ALLELES_SCHEMA
 from mgi_link.mcp.service_adapters import get_mgi_service
 from mgi_link.mcp.tools._common import QueryStr, ResponseMode
 
@@ -24,7 +24,7 @@ def register_allele_tools(mcp: FastMCP) -> None:
         name="get_marker_alleles",
         title="Get Marker Alleles & Mutations",
         annotations=READ_ONLY_OPEN_WORLD,
-        output_schema=ALLELES_SCHEMA,
+        output_schema=None,
         tags={"allele", "mutation"},
         description=(
             "Return the phenotypic alleles / mutations for a mouse marker — the gene "
@@ -43,7 +43,13 @@ def register_allele_tools(mcp: FastMCP) -> None:
         allele_type: Annotated[
             str | None,
             Field(
-                description="Optional allele-type filter (e.g. 'Targeted', 'knockout', 'crispr')."
+                description="Optional generation-method filter. Accepts a canonical MGI "
+                "allele type or a friendly token (knockout, crispr, cre, enu); an "
+                "unrecognised value is rejected with invalid_input.",
+                examples=["Targeted", "knockout", "crispr"],
+                json_schema_extra={
+                    "enum": sorted(set(ALLELE_TYPES) | set(ALLELE_TYPE_ALIASES)),
+                },
             ),
         ] = None,
         limit: Annotated[

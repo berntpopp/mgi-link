@@ -39,6 +39,11 @@ def deny_network_for_unit_tests(
     """Block sockets in unit tests while leaving integration tests explicitly opt-in."""
     if request.node.get_closest_marker("integration") is not None:
         return
+    # The vendored conformance gates (tests/conformance/) speak Streamable HTTP to a
+    # real running server; they are skipped unless CONFORMANCE_MCP_URL is set, and
+    # must reach the loopback endpoint when it is. Exempt them from the network block.
+    if "tests/conformance" in Path(request.node.fspath).as_posix():
+        return
     monkeypatch.setattr(socket, "create_connection", _network_denied)
     monkeypatch.setattr(socket, "socket", _NetworkDeniedSocket)
 

@@ -125,7 +125,7 @@ async def test_data_unavailable_severs_filesystem_path_both_views() -> None:
     result = await mcp.call_tool("get_mp_term", {"mp_id": "MP:0001262"})
     structured, mirror = _both_views(result)
     for view in (structured, mirror):
-        assert view["error_code"] == "data_unavailable"
+        assert view["error_code"] == "upstream_unavailable"
         assert view["message"] == _PUBLIC_MESSAGE["data_unavailable"]
         assert LEAKY_PATH not in json.dumps(view)
         assert "disk I/O" not in json.dumps(view)

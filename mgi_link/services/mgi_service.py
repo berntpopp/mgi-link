@@ -1,20 +1,15 @@
 """Orchestration over the read-only repository.
 
-Returns plain dicts (no envelope); the MCP layer owns ``success``/``_meta``.
-The resolution cascade (MGI id -> current symbol -> synonym -> human ortholog)
-returns the match provenance and surfaces ambiguity instead of silently
-collapsing it.
+Returns plain dicts (no envelope); the MCP layer owns ``success``/``_meta``. The
+resolution cascade (MGI id -> current symbol -> synonym -> human ortholog) returns the
+match provenance and surfaces ambiguity instead of silently collapsing it.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from mgi_link.constants import (
-    ALLELE_TYPE_ALIASES,
-    ORTHOLOG_XREF_FIELDS,
-    XREF_SOURCE_ALIASES,
-)
+from mgi_link.constants import ORTHOLOG_XREF_FIELDS, XREF_SOURCE_ALIASES
 from mgi_link.exceptions import (
     AmbiguousQueryError,
     DataUnavailableError,
@@ -28,6 +23,13 @@ from mgi_link.identifiers import (
     normalize_mp_id,
 )
 from mgi_link.mcp.untrusted_content import UntrustedText, enforce_untrusted_text_limits
+from mgi_link.services.filters import (
+    PHENOTYPE_SCOPE,
+    canonical_allele_type,
+    canonical_marker_type,
+    safe_top_system_names,
+    scope_fields,
+)
 from mgi_link.services.marker_provider import MarkerProvider
 from mgi_link.services.pagination import page_fields
 from mgi_link.services.shaping import (
@@ -218,6 +220,7 @@ class MgiService:
                 "phenotypes": pheno["phenotypes"],
                 "phenotype_references": pheno["references"],
                 "diseases": len(self.repo.get_diseases(mgi_id)),
+                "phenotype_scope": PHENOTYPE_SCOPE,  # single-locus MGI_GenePheno (issue #28 D1)
             }
         out = shape_marker(record, mode)
         if self.using_fallback:
@@ -232,6 +235,7 @@ class MgiService:
         raw = (query or "").strip()
         if not raw:
             raise InvalidInputError("query must be a non-empty search string.", field="query")
+        marker_type = canonical_marker_type(marker_type)
         limit = max(1, min(limit, 200))
         hits = self.repo.search(raw, limit=limit, marker_type=marker_type)
         total = self.repo.count_search(raw, marker_type=marker_type)
@@ -257,7 +261,7 @@ class MgiService:
         marker, _ = self._resolve_to_marker((query or "").strip(), self.repo)
         mgi_id = marker["mgi_id"]
         limit = max(1, min(limit, 1000))
-        type_filter = _normalize_allele_type(allele_type)
+        type_filter = canonical_allele_type(allele_type)
         category_counts = self.repo.allele_category_counts(mgi_id)
         alleles = self.repo.get_alleles(mgi_id, allele_type=type_filter, limit=limit)
         if type_filter:
@@ -287,9 +291,8 @@ class MgiService:
     ) -> dict[str, Any]:
         """Return MP annotations + phenotype summary for a marker.
 
-        minimal/compact/standard return a deduplicated, support-ordered DISTINCT
-        TERM view; full returns the per-genotype rows. ``limit`` applies to the unit
-        each view emits and the truncation contract makes any cap explicit.
+        minimal/compact/standard return a deduplicated, support-ordered DISTINCT TERM
+        view; full returns the per-genotype rows.
         """
         marker, _ = self._resolve_to_marker((query or "").strip(), self.repo)
         mgi_id = marker["mgi_id"]
@@ -312,6 +315,7 @@ class MgiService:
             "mp_system_filter": system_id,
             "view": view,
             "summary": summary,
+            **scope_fields(),
             **page_fields(total=total, returned=len(annotations), limit=limit),
             "annotations": annotations,
         }
@@ -326,6 +330,7 @@ class MgiService:
             "mgi_id": mgi_id,
             "symbol": marker.get("symbol"),
             "summary": summary,
+            **scope_fields(),
             "system_count": len(overview),
             "systems": overview,
         }
@@ -435,6 +440,7 @@ class MgiService:
             "mp_id": normalized,
             "mp_term": term["name"],
             "include_descendants": include_descendants,
+            **scope_fields(),
             **page_fields(total=total, returned=len(markers), limit=limit),
             "markers": markers,
         }
@@ -450,7 +456,8 @@ class MgiService:
             raise InvalidInputError(
                 f"{normalized} is not a top-level MP system.",
                 field="mp_system",
-                allowed=[s["name"] for s in systems],
+                allowed=safe_top_system_names(systems),
+                allowed_trusted=True,
             )
         low = raw.lower()
         for s in systems:
@@ -459,16 +466,10 @@ class MgiService:
         raise InvalidInputError(
             f"Unknown MP system '{mp_system}'.",
             field="mp_system",
-            allowed=[s["name"] for s in systems],
+            allowed=safe_top_system_names(systems),
             hint="Use a top-level system name (e.g. 'renal/urinary system') or its MP id.",
+            allowed_trusted=True,
         )
-
-
-def _normalize_allele_type(allele_type: str | None) -> str | None:
-    """Map a friendly allele-type token to a canonical substring, or pass through."""
-    if not allele_type:
-        return None
-    return ALLELE_TYPE_ALIASES.get(allele_type.strip().lower(), allele_type.strip())
 
 
 def _location(marker: dict[str, Any]) -> str | None:
@@ -495,5 +496,4 @@ def _brief(marker: dict[str, Any], symbol_type: str) -> dict[str, Any]:
     }
 
 
-# Re-export for xref source validation in tools.
-XREF_SOURCES = sorted(set(XREF_SOURCE_ALIASES.values()))
+XREF_SOURCES = sorted(set(XREF_SOURCE_ALIASES.values()))  # xref source validation in tools
