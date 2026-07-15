@@ -69,7 +69,9 @@ def default_error_next_commands(
             if value
             else [cmd("get_server_capabilities")]
         )
-    if error_code == "data_unavailable":
+    if error_code == "upstream_unavailable":
+        # The local index being unbuilt/unreadable classifies as upstream_unavailable
+        # (data dependency down); get_diagnostics reports the build/refresh state.
         return [cmd("get_diagnostics")]
     return [cmd("get_server_capabilities")]
 

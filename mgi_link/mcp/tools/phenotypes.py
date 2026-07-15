@@ -9,7 +9,6 @@ from pydantic import Field
 from mgi_link.mcp.annotations import READ_ONLY_OPEN_WORLD
 from mgi_link.mcp.envelope import McpErrorContext, run_mcp_tool
 from mgi_link.mcp.next_commands import after_find_by_pheno, after_overview, after_phenotypes
-from mgi_link.mcp.schemas import FIND_MARKERS_SCHEMA, OVERVIEW_SCHEMA, PHENOTYPES_SCHEMA
 from mgi_link.mcp.service_adapters import get_mgi_service
 from mgi_link.mcp.tools._common import MpIdStr, QueryStr, ResponseMode
 
@@ -24,21 +23,23 @@ def register_phenotype_tools(mcp: FastMCP) -> None:
         name="get_marker_phenotypes",
         title="Get Marker Phenotypes",
         annotations=READ_ONLY_OPEN_WORLD,
-        output_schema=PHENOTYPES_SCHEMA,
+        output_schema=None,
         tags={"phenotype"},
         description=(
-            "Return the Mammalian Phenotype (MP) annotations for a mouse marker — "
-            "the gene page's Phenotypes section. By default (minimal/compact/standard) "
-            "returns a DEDUPLICATED, support-ordered list of DISTINCT MP terms — each "
-            "{mp_id, mp_term, genotype_count} (standard adds systems[]) — so the most "
-            "replicated phenotypes come first and none are buried alphabetically. "
-            "response_mode=full returns the per-genotype rows {mp_id, mp_term, "
-            "allelic_composition, genetic_background, pubmed_id, genotype_id, ...}. "
-            "Every response carries a phenotype summary and a truncation contract "
-            "{total, returned, limit, truncated}; when truncated, next_commands "
-            "includes a widen step. mp_system optionally restricts to one top-level "
-            "system (name like 'renal/urinary system' or its MP id). Annotations are "
-            "single-gene genotypes (MGI_GenePheno). "
+            "Return the Mammalian Phenotype (MP) annotations for a mouse marker. By "
+            "default (minimal/compact/standard) returns a DEDUPLICATED, support-ordered "
+            "list of DISTINCT MP terms — each {mp_id, mp_term, genotype_count} (standard "
+            "adds systems[]) — so the most replicated phenotypes come first and none are "
+            "buried alphabetically. response_mode=full returns the per-genotype rows "
+            "{mp_id, mp_term, allelic_composition, genetic_background, pubmed_id, "
+            "genotype_id, ...}. Every response carries a phenotype summary and a "
+            "truncation contract {total, returned, limit, truncated}; when truncated, "
+            "next_commands includes a widen step. mp_system optionally restricts to one "
+            "top-level system (name like 'renal/urinary system' or its MP id). SCOPE: "
+            "annotations are single-locus, NON-conditional genotypes (MGI_GenePheno); "
+            "conditional/Cre-driven and multi-genic genotypes are EXCLUDED (see the "
+            "response 'scope'/'scope_note'), so a zero or empty result does not mean the "
+            "gene lacks that phenotype in mouse — confirm on the MGI gene page. "
             "Signature: get_marker_phenotypes(query, mp_system=, limit=, response_mode=)."
         ),
     )
@@ -75,15 +76,19 @@ def register_phenotype_tools(mcp: FastMCP) -> None:
         name="get_phenotype_overview",
         title="Get Phenotype Overview Grid",
         annotations=READ_ONLY_OPEN_WORLD,
-        output_schema=OVERVIEW_SCHEMA,
+        output_schema=None,
         tags={"phenotype"},
         description=(
-            "Return the gene page's 'Phenotype Overview' grid: for each top-level MP "
-            "system annotated for the marker (adipose tissue, cardiovascular system, "
+            "Return a per-system phenotype overview grid: for each top-level MP system "
+            "annotated for the marker (adipose tissue, cardiovascular system, "
             "renal/urinary system, nervous system, neoplasm, vision/eye, ...), the "
             "distinct annotated MP terms rolled up via the MP ontology. Use this for "
-            "the system-level overview, then get_marker_phenotypes(mp_system=) to "
-            "drill into one system. "
+            "the system-level overview, then get_marker_phenotypes(mp_system=) to drill "
+            "into one system. SCOPE: built from single-locus, NON-conditional genotypes "
+            "(MGI_GenePheno); conditional/Cre-driven and multi-genic genotypes are "
+            "EXCLUDED (see the response 'scope'/'scope_note'), so this grid is NOT a "
+            "full mirror of the MGI gene page and a system may be absent here while the "
+            "gene page shows it. "
             "Signature: get_phenotype_overview(query)."
         ),
     )
@@ -103,7 +108,7 @@ def register_phenotype_tools(mcp: FastMCP) -> None:
         name="find_markers_by_phenotype",
         title="Find Markers by Phenotype",
         annotations=READ_ONLY_OPEN_WORLD,
-        output_schema=FIND_MARKERS_SCHEMA,
+        output_schema=None,
         tags={"phenotype", "reverse"},
         description=(
             "Reverse lookup: return the mouse markers (genes) annotated with a "

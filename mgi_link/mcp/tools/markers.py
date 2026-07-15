@@ -9,7 +9,6 @@ from pydantic import Field
 from mgi_link.mcp.annotations import READ_ONLY_OPEN_WORLD
 from mgi_link.mcp.envelope import McpErrorContext, run_mcp_tool
 from mgi_link.mcp.next_commands import after_get_marker, after_resolve, after_search
-from mgi_link.mcp.schemas import MARKER_SCHEMA, RESOLVE_SCHEMA, SEARCH_SCHEMA
 from mgi_link.mcp.service_adapters import get_mgi_service
 from mgi_link.mcp.tools._common import QueryStr, ResponseMode
 
@@ -24,7 +23,7 @@ def register_marker_tools(mcp: FastMCP) -> None:
         name="resolve_marker",
         title="Resolve Mouse Marker",
         annotations=READ_ONLY_OPEN_WORLD,
-        output_schema=RESOLVE_SCHEMA,
+        output_schema=None,
         tags={"resolve"},
         description=(
             "Resolve any mouse marker reference to its canonical MGI record. Accepts "
@@ -60,7 +59,7 @@ def register_marker_tools(mcp: FastMCP) -> None:
         name="get_marker",
         title="Get Marker Record",
         annotations=READ_ONLY_OPEN_WORLD,
-        output_schema=MARKER_SCHEMA,
+        output_schema=None,
         tags={"marker"},
         description=(
             "Return the full MGI marker record, resolved from an MGI id, mouse "
@@ -96,7 +95,7 @@ def register_marker_tools(mcp: FastMCP) -> None:
         name="search_markers",
         title="Search Markers",
         annotations=READ_ONLY_OPEN_WORLD,
-        output_schema=SEARCH_SCHEMA,
+        output_schema=None,
         tags={"marker"},
         description=(
             "Free-text search over mouse marker symbols, names, and synonyms (FTS, "
@@ -114,10 +113,21 @@ def register_marker_tools(mcp: FastMCP) -> None:
     )
     async def search_markers(
         query: Annotated[
-            str, Field(description="Free-text query (symbol fragment, name, synonym).")
+            str,
+            Field(
+                description="Free-text query (symbol fragment, name, synonym).",
+                examples=["Pax6", "kidney", "Hox"],
+            ),
         ],
         marker_type: Annotated[
-            str | None, Field(description="Optional marker type filter, e.g. 'Gene'.")
+            str | None,
+            Field(
+                description="Optional exact marker-type filter (case-insensitive), one of: "
+                "Gene, Pseudogene, DNA Segment, QTL, Cytogenetic Marker, BAC/YAC end, "
+                "Complex/Cluster/Region, Transgene, Other Genome Feature, GeneModel. An "
+                "unrecognised value is rejected with invalid_input.",
+                examples=["Gene", "Pseudogene"],
+            ),
         ] = None,
         limit: Annotated[int, Field(ge=1, le=200, description="Max hits (default 25).")] = 25,
         response_mode: ResponseMode = "compact",

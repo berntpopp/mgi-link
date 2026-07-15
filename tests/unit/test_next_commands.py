@@ -95,7 +95,7 @@ def test_default_error_next_commands() -> None:
     mp = nc.default_error_next_commands("get_mp_term", "not_found", {"mp_id": "MP:0000001"})
     assert mp[0]["tool"] == "search_phenotype_terms"
     assert mp[0]["arguments"]["query"] == "MP:0000001"
-    du = nc.default_error_next_commands("get_marker", "data_unavailable", {})
+    du = nc.default_error_next_commands("get_marker", "upstream_unavailable", {})
     assert du[0]["tool"] == "get_diagnostics"
 
 

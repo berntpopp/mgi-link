@@ -216,19 +216,22 @@ def build_capabilities() -> dict[str, Any]:
             "next_commands to each candidate."
         ),
         "scope_notes": (
-            "Phenotype annotations are single-gene genotypes (MGI_GenePheno). "
-            "Multigenic-genotype phenotypes, IMSR strain availability, gene "
-            "expression (GXD), and recombinase activity are out of scope in v1."
+            "Phenotype annotations cover single-locus, NON-conditional genotypes only "
+            "(MGI_GenePheno). Conditional/Cre-driven and multi-genic genotypes are "
+            "EXCLUDED by this MGI data source and may appear on the MGI gene page (e.g. "
+            "tissue-specific renal phenotypes from Cre conditional alleles), so a zero "
+            "or partial phenotype result does not mean the gene lacks that phenotype in "
+            "mouse. Every phenotype response carries scope='single_locus_genotypes_only' "
+            "and a scope_note. IMSR strain availability, gene expression (GXD), and "
+            "recombinase activity are also out of scope in v1."
         ),
         "error_codes": [
             "invalid_input",
             "not_found",
             "ambiguous_query",
-            "data_unavailable",
-            "rate_limited",
             "upstream_unavailable",
-            "response_limit_exceeded",
-            "internal_error",
+            "rate_limited",
+            "internal",
         ],
         "limits": {
             "max_search_limit": 200,

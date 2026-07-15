@@ -46,8 +46,42 @@ logger = logging.getLogger(__name__)
 # every response_mode. _UNSAFE_FOR_CLINICAL_USE_META is merged in last on every
 # envelope-building path so no response_mode projection or field allowlist can
 # ever drop it.
-_RETRYABLE = {"rate_limited", "upstream_unavailable", "data_unavailable"}
+_RETRYABLE = {"rate_limited", "upstream_unavailable"}
 _UNSAFE_FOR_CLINICAL_USE_META: dict[str, Any] = {"unsafe_for_clinical_use": True}
+
+# Response-Envelope Standard v1: error_code is a CLOSED enum of exactly these six,
+# "harmonized with codes already used in the fleet". Anything else -- however
+# sensible it reads -- is a violation an agent branching on error_code cannot rely
+# on. mgi-link historically shipped three out-of-enum codes (data_unavailable,
+# response_limit_exceeded, internal_error); they are mapped onto the canon here so
+# the wire NEVER carries a non-member (the router's behaviour gate enforces this).
+_CANON_CODES = frozenset(
+    {
+        "invalid_input",
+        "not_found",
+        "ambiguous_query",
+        "upstream_unavailable",
+        "rate_limited",
+        "internal",
+    }
+)
+_LEGACY_CODE_MAP: dict[str, str] = {
+    "internal_error": "internal",
+    # The local index being unbuilt is the data dependency (its "upstream") being
+    # unavailable -- retryable once the build/refresh completes.
+    "data_unavailable": "upstream_unavailable",
+    # An oversized untrusted-text payload is fixed by narrowing the request, so it
+    # is an input problem the caller can act on -- invalid_input, not internal.
+    "response_limit_exceeded": "invalid_input",
+    "validation_failed": "invalid_input",
+}
+
+
+def _canonical_code(code: str) -> str:
+    """Map any error_code onto the closed six-value enum (fall back to ``internal``)."""
+    if code in _CANON_CODES:
+        return code
+    return _LEGACY_CODE_MAP.get(code, "internal")
 
 
 @dataclass
@@ -108,6 +142,14 @@ _REDACTED_FIELD = "<unknown>"
 # "1..200", an id). It has NO whitespace, so it cannot carry a multi-word
 # instruction; anything else (incl. a free-text label or injected prose) is dropped.
 _ALLOWED_VALUE_RE = re.compile(r"^[A-Za-z0-9][\w.:/<>()+-]{0,63}$")
+# A TRUSTED allowed_values entry: a SERVER-CONTROLLED closed-vocabulary LABEL that
+# may contain spaces (e.g. "renal/urinary system phenotype", "Chemically induced
+# (ENU)"). Built ONLY from this server's own constants / local ontology, never from
+# caller input, so the whitespace-free grammar above would WRONGLY drop them (the D2
+# bug: "kidney stuff" listed only mortality/aging + neoplasm, omitting 26 valid
+# values). A tight allowlist of label characters -- any control/zero-width/bidi/NUL
+# code point still drops the value, and the whole-envelope backstop runs on top.
+_TRUSTED_ALLOWED_VALUE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 /()_.:'+-]{0,79}$")
 
 
 def _sanitize_tree(value: Any) -> Any:
@@ -199,6 +241,22 @@ def _validated_allowed_values(allowed: Any) -> list[str]:
     return [item for item in allowed if isinstance(item, str) and _ALLOWED_VALUE_RE.match(item)]
 
 
+def _validated_trusted_allowed_values(allowed: Any) -> list[str]:
+    """Keep server-controlled closed-vocabulary LABELS (spaces allowed), dropping junk.
+
+    Used only for ``InvalidInputError(allowed_trusted=True)`` -- the top-level MP
+    system names / marker types / allele types, which are built from this server's
+    own constants and local ontology, never from caller input. Multi-word labels
+    are kept (that is the whole point), but the label grammar still admits only
+    known-safe characters, so no control/zero-width/bidi/NUL code point survives.
+    """
+    if not isinstance(allowed, list):
+        return []
+    return [
+        item for item in allowed if isinstance(item, str) and _TRUSTED_ALLOWED_VALUE_RE.match(item)
+    ]
+
+
 def _classify(exc: BaseException) -> tuple[str, str]:
     """Return ``(error_code, fixed_public_message)`` for an exception.
 
@@ -207,9 +265,9 @@ def _classify(exc: BaseException) -> tuple[str, str]:
     message is authored in-tool; it is length-capped + code-point-stripped.
     """
     if isinstance(exc, McpToolError):
-        return exc.error_code, sanitize_message(exc.message)
+        return _canonical_code(exc.error_code), sanitize_message(exc.message)
     if isinstance(exc, UntrustedTextLimitError):
-        return "response_limit_exceeded", _PUBLIC_MESSAGE["response_limit_exceeded"]
+        return "invalid_input", _PUBLIC_MESSAGE["response_limit_exceeded"]
     if isinstance(exc, WithdrawnEntryError):  # a NotFoundError subclass; check first
         return "not_found", _WITHDRAWN_MESSAGE
     if isinstance(exc, NotFoundError):
@@ -219,22 +277,23 @@ def _classify(exc: BaseException) -> tuple[str, str]:
     if isinstance(exc, InvalidInputError):
         return "invalid_input", _PUBLIC_MESSAGE["invalid_input"]
     if isinstance(exc, DataUnavailableError):
-        return "data_unavailable", _PUBLIC_MESSAGE["data_unavailable"]
+        return "upstream_unavailable", _PUBLIC_MESSAGE["data_unavailable"]
     if isinstance(exc, RateLimitError):
         return "rate_limited", _PUBLIC_MESSAGE["rate_limited"]
     if isinstance(exc, ServiceUnavailableError | DownloadError):
         return "upstream_unavailable", _PUBLIC_MESSAGE["upstream_unavailable"]
     if isinstance(exc, PydanticValidationError):
         return "invalid_input", _PUBLIC_MESSAGE["invalid_input"]
-    return "internal_error", _PUBLIC_MESSAGE["internal_error"]
+    return "internal", _PUBLIC_MESSAGE["internal_error"]
 
 
 def _recovery_action(error_code: str) -> str:
     if error_code in _RETRYABLE:
         return "retry_backoff"
-    # response_limit_exceeded: retrying the same request yields the same oversized
-    # payload, so the recovery is to narrow the input (e.g. a smaller `limit`).
-    if error_code in {"invalid_input", "not_found", "ambiguous_query", "response_limit_exceeded"}:
+    # invalid_input also covers the former response_limit_exceeded: retrying the same
+    # request yields the same oversized payload, so the recovery is to narrow the
+    # input (e.g. a smaller `limit`) -- reformulate, do not retry unchanged.
+    if error_code in {"invalid_input", "not_found", "ambiguous_query"}:
         return "reformulate_input"
     return "switch_tool"
 
@@ -265,7 +324,15 @@ def _error_envelope(exc: BaseException, context: McpErrorContext) -> dict[str, A
         # prose through). The whole-envelope pass strips code points as a backstop.
         if exc.field is not None:
             envelope["field"] = _declared_field(exc.field)
-        allowed_values = _validated_allowed_values(exc.allowed)
+        # A SERVER-CONTROLLED closed vocabulary (allowed_trusted=True) may contain
+        # multi-word labels and must be listed IN FULL; a caller/upstream-derived
+        # list keeps the strict whitespace-free grammar. Both still pass through the
+        # whole-envelope code-point backstop below.
+        allowed_values = (
+            _validated_trusted_allowed_values(exc.allowed)
+            if getattr(exc, "allowed_trusted", False)
+            else _validated_allowed_values(exc.allowed)
+        )
         if allowed_values:
             envelope["allowed_values"] = allowed_values
     if isinstance(exc, WithdrawnEntryError):

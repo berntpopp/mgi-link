@@ -4,6 +4,53 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-15
+
+### Fixed
+
+- **HNF1B reported ZERO renal phenotypes with `success:true` — a confidently-empty
+  answer that is the OPPOSITE of the truth (issue #28, D1).** The phenotype tools are
+  backed by `MGI_GenePheno`, which excludes conditional/Cre-driven and multi-genic
+  genotypes — exactly the genotypes that carry Hnf1b's renal phenotypes (Wnt4-Cre
+  conditional alleles). A `total:0, truncated:false, success:true` result was therefore
+  indistinguishable from "this gene has no renal phenotype in mouse". Every
+  `get_marker_phenotypes` and `get_phenotype_overview` response now carries an explicit
+  scope flag — `scope: "single_locus_genotypes_only"`, `excludes_conditional_genotypes:
+  true`, and a `scope_note` — so a zero/partial count is self-describing, and the
+  `get_phenotype_overview` description no longer claims MGI-gene-page parity.
+- **An invalid `mp_system` listed 2 of ~25 valid systems (issue #28, D2).** The error's
+  `allowed_values` ran through the envelope's whitespace-free sanitiser, which dropped
+  every multi-word system name — leaving only `mortality/aging` and `neoplasm`. The
+  vocabulary is server-controlled (the local MP ontology), so it is now surfaced in full
+  via a trusted-label channel (`InvalidInputError(allowed_trusted=True)`); the error lists
+  all 28 top-level systems, including the (valid) `renal/urinary system phenotype`.
+- **`marker_type` / `allele_type` silently matched nothing on an unrecognised value.** A
+  bogus filter value returned `success:true` with zero rows (the silent-empty-filter
+  class). Both now reject an unrecognised value with `invalid_input`, naming the full
+  vocabulary, and resolve a known value case-insensitively.
+- **Error envelopes did not set MCP `isError`.** Both error paths — a tool body's
+  `success:false` envelope and an argument-binding failure — now carry `isError: true`, so
+  a client branching on it sees the failure (Response-Envelope Standard v1).
+
+### Changed
+
+- **`error_code` is closed to the six-value fleet enum** (`invalid_input`, `not_found`,
+  `ambiguous_query`, `upstream_unavailable`, `rate_limited`, `internal`). The out-of-enum
+  codes are mapped on: `data_unavailable` → `upstream_unavailable`, `internal_error` →
+  `internal`, `response_limit_exceeded` → `invalid_input`. `get_server_capabilities` now
+  advertises the closed set.
+- **Tool surface trimmed 6,497 → ~4,200 tokens** by suppressing every tool's
+  `outputSchema` (`output_schema=None`, 39% → 0% of surface — the structured envelope is
+  unchanged) and emitting compact input schemas (`dereference_schemas=False`).
+- **Schema documentation:** required search parameters and the `marker_type`/`allele_type`
+  filters now carry `examples`, so every tool is probeable (0 UNGATED).
+
+### Testing
+
+- Vendored the fleet Behaviour Conformance v1 gate (`tests/conformance/behaviour.py` +
+  `test_behaviour_v1.py`, byte-identical from the router) and wired it into
+  `conformance.yml`. The gate is CONFORMANT (0 fail, 0 UNGATED) against a live server.
+
 ## [0.5.7] - 2026-07-14
 
 ### Changed

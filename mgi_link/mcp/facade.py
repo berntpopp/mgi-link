@@ -30,6 +30,9 @@ def create_mgi_mcp() -> FastMCP:
         version=__version__,
         instructions=MGI_SERVER_INSTRUCTIONS,
         mask_error_details=True,
+        # Tool-Surface Budget v1: emit compact input schemas (no $ref expansion). Safe
+        # here — no INPUT schema contains a $ref — and it trims the advertised surface.
+        dereference_schemas=False,
     )
 
     register_discovery_tools(mcp)

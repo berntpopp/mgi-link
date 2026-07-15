@@ -137,6 +137,22 @@ MATCH_TYPES: tuple[str, ...] = (
     "ortholog",
 )
 
+#: The phenotype data source (MGI_GenePheno.rpt) covers ONLY single-locus,
+#: non-conditional genotypes. Conditional/Cre-driven and multi-genic genotypes are
+#: excluded by MGI from this report, so a marker whose phenotypes come from such
+#: genotypes (e.g. Hnf1b's renal phenotypes from Wnt4-Cre conditional alleles) can
+#: report ZERO annotations here while the MGI gene page shows them. Every phenotype
+#: response carries this scope so a zero/partial count is never mistaken for "this
+#: gene has no such phenotype in mouse" (issue #28, defect D1).
+PHENOTYPE_SCOPE = "single_locus_genotypes_only"
+PHENOTYPE_SCOPE_NOTE = (
+    "Phenotype annotations cover single-locus, non-conditional genotypes only "
+    "(MGI_GenePheno). Conditional/Cre-driven and multi-genic genotypes are excluded "
+    "by this MGI data source and may appear on the MGI gene page (e.g. tissue-specific "
+    "renal phenotypes from Cre conditional alleles). A zero or partial count here does "
+    "NOT mean the gene lacks that phenotype in mouse; confirm on the MGI gene page."
+)
+
 #: Zygosity codes seen in MouseMine genotype annotations.
 ZYGOSITY_LABELS: dict[str, str] = {
     "hm": "homozygous",

@@ -41,17 +41,25 @@ class InvalidInputError(MgiError):
         *,
         allowed: list[str] | None = None,
         hint: str | None = None,
+        allowed_trusted: bool = False,
     ) -> None:
         """Initialise with the offending field and optional recovery data.
 
         ``allowed`` and ``hint`` are surfaced as structured top-level keys on the
         error envelope (``allowed_values``/``hint``) so a consumer never has to
         parse them out of a (length-capped) message.
+
+        ``allowed_trusted`` marks ``allowed`` as a SERVER-CONTROLLED closed
+        vocabulary (built from this server's own constants / local ontology, never
+        from caller input), so the envelope may surface its multi-word labels in
+        full instead of dropping every space-containing value. Leave it False for
+        any list that could carry caller/upstream text.
         """
         super().__init__(message)
         self.field = field
         self.allowed = allowed
         self.hint = hint
+        self.allowed_trusted = allowed_trusted
 
 
 class NotFoundError(MgiError):

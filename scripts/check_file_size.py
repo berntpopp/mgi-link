@@ -13,6 +13,9 @@ from pathlib import Path
 MAX_LINES = 500
 ROOTS = ("mgi_link", "tests")
 EXTRA_FILES = ("server.py", "mcp_server.py")
+# Vendored, byte-identical fleet conformance gates: they are copied verbatim from
+# the router repo and MUST NOT be split, so they are exempt from the line budget.
+EXEMPT_DIRS = ("tests/conformance",)
 
 
 def main() -> int:
@@ -24,6 +27,9 @@ def main() -> int:
         paths.extend((repo / root).rglob("*.py"))
     for path in paths:
         if not path.exists():
+            continue
+        rel_posix = path.relative_to(repo).as_posix()
+        if any(rel_posix.startswith(f"{d}/") for d in EXEMPT_DIRS):
             continue
         lines = path.read_text(encoding="utf-8").count("\n") + 1
         if lines > MAX_LINES:

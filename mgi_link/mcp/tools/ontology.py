@@ -9,7 +9,6 @@ from pydantic import Field
 from mgi_link.mcp.annotations import READ_ONLY_OPEN_WORLD
 from mgi_link.mcp.envelope import McpErrorContext, run_mcp_tool
 from mgi_link.mcp.next_commands import after_mp_term, after_search_terms
-from mgi_link.mcp.schemas import MP_SEARCH_SCHEMA, MP_TERM_SCHEMA
 from mgi_link.mcp.service_adapters import get_mgi_service
 from mgi_link.mcp.tools._common import MpIdStr
 
@@ -24,7 +23,7 @@ def register_ontology_tools(mcp: FastMCP) -> None:
         name="get_mp_term",
         title="Get Mammalian Phenotype Term",
         annotations=READ_ONLY_OPEN_WORLD,
-        output_schema=MP_TERM_SCHEMA,
+        output_schema=None,
         tags={"ontology", "phenotype"},
         description=(
             "Return a Mammalian Phenotype (MP) ontology term: id, name, definition, "
@@ -50,7 +49,7 @@ def register_ontology_tools(mcp: FastMCP) -> None:
         name="search_phenotype_terms",
         title="Search Mammalian Phenotype Terms",
         annotations=READ_ONLY_OPEN_WORLD,
-        output_schema=MP_SEARCH_SCHEMA,
+        output_schema=None,
         tags={"ontology", "phenotype"},
         description=(
             "Free-text search over Mammalian Phenotype (MP) term names and "
@@ -64,7 +63,11 @@ def register_ontology_tools(mcp: FastMCP) -> None:
     )
     async def search_phenotype_terms(
         query: Annotated[
-            str, Field(description="Free-text phenotype query (e.g. 'small kidney').")
+            str,
+            Field(
+                description="Free-text phenotype query (e.g. 'small kidney').",
+                examples=["small kidney", "seizures", "hydronephrosis"],
+            ),
         ],
         limit: Annotated[int, Field(ge=1, le=200, description="Max hits (default 25).")] = 25,
     ) -> dict[str, Any]:

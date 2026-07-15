@@ -12,7 +12,6 @@ from mgi_link.mcp.annotations import READ_ONLY_OPEN_WORLD
 from mgi_link.mcp.capabilities import collect_tool_signatures, project_capabilities
 from mgi_link.mcp.envelope import McpErrorContext, run_mcp_tool
 from mgi_link.mcp.next_commands import cmd
-from mgi_link.mcp.schemas import CAPABILITIES_SCHEMA, DIAGNOSTICS_SCHEMA
 from mgi_link.mcp.service_adapters import get_mgi_service
 from mgi_link.redaction import redact_url
 
@@ -27,7 +26,7 @@ def register_discovery_tools(mcp: FastMCP) -> None:
         name="get_server_capabilities",
         title="Get Server Capabilities",
         annotations=READ_ONLY_OPEN_WORLD,
-        output_schema=CAPABILITIES_SCHEMA,
+        output_schema=None,
         tags={"discovery"},
         description=(
             "Return the mgi-link discovery surface. detail='summary' (default) is "
@@ -59,7 +58,7 @@ def register_discovery_tools(mcp: FastMCP) -> None:
         name="get_diagnostics",
         title="Get MGI Diagnostics",
         annotations=READ_ONLY_OPEN_WORLD,
-        output_schema=DIAGNOSTICS_SCHEMA,
+        output_schema=None,
         tags={"discovery"},
         description=(
             "Report the local MGI index status: whether the data is built, the "
