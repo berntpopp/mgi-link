@@ -185,8 +185,8 @@ def build_capabilities() -> dict[str, Any]:
                 "When the local index is unavailable AND mousemine.enable_live_fallback "
                 "is on, resolve_marker and get_marker serve from a live MouseMine query "
                 "(genes only; _meta.source='mousemine'; get_marker omits summary counts "
-                "and sets _meta.partial). All other tools return data_unavailable while "
-                "the index is cold. Default off: behavior is unchanged."
+                "and sets _meta.partial). All other tools return upstream_unavailable "
+                "while the index is cold. Default off: behavior is unchanged."
             ),
         },
         "field_glossary": {

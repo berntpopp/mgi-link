@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 
 from pydantic import Field
 
+from mgi_link.constants import MARKER_TYPES
 from mgi_link.mcp.annotations import READ_ONLY_OPEN_WORLD
 from mgi_link.mcp.envelope import McpErrorContext, run_mcp_tool
 from mgi_link.mcp.next_commands import after_get_marker, after_resolve, after_search
@@ -122,11 +123,10 @@ def register_marker_tools(mcp: FastMCP) -> None:
         marker_type: Annotated[
             str | None,
             Field(
-                description="Optional exact marker-type filter (case-insensitive), one of: "
-                "Gene, Pseudogene, DNA Segment, QTL, Cytogenetic Marker, BAC/YAC end, "
-                "Complex/Cluster/Region, Transgene, Other Genome Feature, GeneModel. An "
-                "unrecognised value is rejected with invalid_input.",
+                description="Optional exact marker-type filter (case-insensitive). One of "
+                "the MGI marker types; an unrecognised value is rejected with invalid_input.",
                 examples=["Gene", "Pseudogene"],
+                json_schema_extra={"enum": list(MARKER_TYPES)},
             ),
         ] = None,
         limit: Annotated[int, Field(ge=1, le=200, description="Max hits (default 25).")] = 25,

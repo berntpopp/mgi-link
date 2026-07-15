@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 
 from pydantic import Field
 
+from mgi_link.constants import ALLELE_TYPE_ALIASES, ALLELE_TYPES
 from mgi_link.mcp.annotations import READ_ONLY_OPEN_WORLD
 from mgi_link.mcp.envelope import McpErrorContext, run_mcp_tool
 from mgi_link.mcp.next_commands import after_alleles
@@ -42,12 +43,13 @@ def register_allele_tools(mcp: FastMCP) -> None:
         allele_type: Annotated[
             str | None,
             Field(
-                description="Optional generation-method filter. Accepts a canonical type "
-                "(Targeted, Endonuclease-mediated, Gene trapped, Spontaneous, Chemically "
-                "induced (ENU), Radiation induced, Transgenic, Transposon induced, "
-                "Targeted (Recombinase), QTL, ...) or a friendly token (knockout, crispr, "
-                "cre, enu). An unrecognised value is rejected with invalid_input.",
+                description="Optional generation-method filter. Accepts a canonical MGI "
+                "allele type or a friendly token (knockout, crispr, cre, enu); an "
+                "unrecognised value is rejected with invalid_input.",
                 examples=["Targeted", "knockout", "crispr"],
+                json_schema_extra={
+                    "enum": sorted(set(ALLELE_TYPES) | set(ALLELE_TYPE_ALIASES)),
+                },
             ),
         ] = None,
         limit: Annotated[

@@ -15,10 +15,30 @@ from mgi_link.constants import (
     ALLELE_TYPE_ALIASES,
     ALLELE_TYPES,
     MARKER_TYPES,
+    MP_TOP_SYSTEM_NAMES,
     PHENOTYPE_SCOPE,
     PHENOTYPE_SCOPE_NOTE,
 )
 from mgi_link.exceptions import InvalidInputError
+
+__all__ = [
+    "PHENOTYPE_SCOPE",
+    "canonical_allele_type",
+    "canonical_marker_type",
+    "safe_top_system_names",
+    "scope_fields",
+]
+
+
+def safe_top_system_names(systems: list[dict[str, str]]) -> list[str]:
+    """Top-level MP system names safe to surface in an error's allowed_values.
+
+    The live grid is built from the downloaded MP OBO (EXTERNAL data), so a name is
+    emitted ONLY if it is a member of the curated server-controlled allowlist
+    ``MP_TOP_SYSTEM_NAMES`` — an ontology-injected label can never reach the caller.
+    Order is preserved (display_order from the grid).
+    """
+    return [s["name"] for s in systems if s.get("name") in MP_TOP_SYSTEM_NAMES]
 
 
 def scope_fields() -> dict[str, Any]:

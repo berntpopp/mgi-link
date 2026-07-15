@@ -145,6 +145,45 @@ MATCH_TYPES: tuple[str, ...] = (
 #: response carries this scope so a zero/partial count is never mistaken for "this
 #: gene has no such phenotype in mouse" (issue #28, defect D1).
 PHENOTYPE_SCOPE = "single_locus_genotypes_only"
+#: The curated, SERVER-CONTROLLED set of top-level MP system display names (the MGI
+#: "Phenotype Overview" grid columns, direct children of MP:0000001). The live grid
+#: is built from the downloaded MP OBO, which is EXTERNAL data; an invalid-mp_system
+#: error must therefore surface only names present in this fixed allowlist, so no
+#: ontology-injected label can reach the caller (issue #28 review, D2 hardening). A
+#: legitimately new MGI system is still accepted at runtime (it is validated against
+#: the live grid) — it is just omitted from the error list until added here.
+MP_TOP_SYSTEM_NAMES: frozenset[str] = frozenset(
+    {
+        "adipose tissue phenotype",
+        "behavior/neurological phenotype",
+        "cardiovascular system phenotype",
+        "cellular phenotype",
+        "craniofacial phenotype",
+        "digestive/alimentary phenotype",
+        "embryo phenotype",
+        "endocrine/exocrine gland phenotype",
+        "growth/size/body region phenotype",
+        "hearing/vestibular/ear phenotype",
+        "hematopoietic system phenotype",
+        "homeostasis/metabolism phenotype",
+        "immune system phenotype",
+        "integument phenotype",
+        "limbs/digits/tail phenotype",
+        "liver/biliary system phenotype",
+        "mortality/aging",
+        "muscle phenotype",
+        "neoplasm",
+        "nervous system phenotype",
+        "normal phenotype",
+        "pigmentation phenotype",
+        "renal/urinary system phenotype",
+        "reproductive system phenotype",
+        "respiratory system phenotype",
+        "skeleton phenotype",
+        "taste/olfaction phenotype",
+        "vision/eye phenotype",
+    }
+)
 PHENOTYPE_SCOPE_NOTE = (
     "Phenotype annotations cover single-locus, non-conditional genotypes only "
     "(MGI_GenePheno). Conditional/Cre-driven and multi-genic genotypes are excluded "

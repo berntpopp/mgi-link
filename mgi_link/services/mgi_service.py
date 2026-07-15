@@ -1,9 +1,8 @@
 """Orchestration over the read-only repository.
 
-Returns plain dicts (no envelope); the MCP layer owns ``success``/``_meta``.
-The resolution cascade (MGI id -> current symbol -> synonym -> human ortholog)
-returns the match provenance and surfaces ambiguity instead of silently
-collapsing it.
+Returns plain dicts (no envelope); the MCP layer owns ``success``/``_meta``. The
+resolution cascade (MGI id -> current symbol -> synonym -> human ortholog) returns the
+match provenance and surfaces ambiguity instead of silently collapsing it.
 """
 
 from __future__ import annotations
@@ -25,8 +24,10 @@ from mgi_link.identifiers import (
 )
 from mgi_link.mcp.untrusted_content import UntrustedText, enforce_untrusted_text_limits
 from mgi_link.services.filters import (
+    PHENOTYPE_SCOPE,
     canonical_allele_type,
     canonical_marker_type,
+    safe_top_system_names,
     scope_fields,
 )
 from mgi_link.services.marker_provider import MarkerProvider
@@ -219,6 +220,7 @@ class MgiService:
                 "phenotypes": pheno["phenotypes"],
                 "phenotype_references": pheno["references"],
                 "diseases": len(self.repo.get_diseases(mgi_id)),
+                "phenotype_scope": PHENOTYPE_SCOPE,  # single-locus MGI_GenePheno (issue #28 D1)
             }
         out = shape_marker(record, mode)
         if self.using_fallback:
@@ -289,9 +291,8 @@ class MgiService:
     ) -> dict[str, Any]:
         """Return MP annotations + phenotype summary for a marker.
 
-        minimal/compact/standard return a deduplicated, support-ordered DISTINCT
-        TERM view; full returns the per-genotype rows. ``limit`` applies to the unit
-        each view emits and the truncation contract makes any cap explicit.
+        minimal/compact/standard return a deduplicated, support-ordered DISTINCT TERM
+        view; full returns the per-genotype rows.
         """
         marker, _ = self._resolve_to_marker((query or "").strip(), self.repo)
         mgi_id = marker["mgi_id"]
@@ -439,6 +440,7 @@ class MgiService:
             "mp_id": normalized,
             "mp_term": term["name"],
             "include_descendants": include_descendants,
+            **scope_fields(),
             **page_fields(total=total, returned=len(markers), limit=limit),
             "markers": markers,
         }
@@ -454,7 +456,7 @@ class MgiService:
             raise InvalidInputError(
                 f"{normalized} is not a top-level MP system.",
                 field="mp_system",
-                allowed=[s["name"] for s in systems],
+                allowed=safe_top_system_names(systems),
                 allowed_trusted=True,
             )
         low = raw.lower()
@@ -464,7 +466,7 @@ class MgiService:
         raise InvalidInputError(
             f"Unknown MP system '{mp_system}'.",
             field="mp_system",
-            allowed=[s["name"] for s in systems],
+            allowed=safe_top_system_names(systems),
             hint="Use a top-level system name (e.g. 'renal/urinary system') or its MP id.",
             allowed_trusted=True,
         )
@@ -494,5 +496,4 @@ def _brief(marker: dict[str, Any], symbol_type: str) -> dict[str, Any]:
     }
 
 
-# Re-export for xref source validation in tools.
-XREF_SOURCES = sorted(set(XREF_SOURCE_ALIASES.values()))
+XREF_SOURCES = sorted(set(XREF_SOURCE_ALIASES.values()))  # xref source validation in tools

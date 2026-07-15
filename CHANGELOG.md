@@ -13,17 +13,21 @@ All notable changes to mgi-link are documented here.
   backed by `MGI_GenePheno`, which excludes conditional/Cre-driven and multi-genic
   genotypes — exactly the genotypes that carry Hnf1b's renal phenotypes (Wnt4-Cre
   conditional alleles). A `total:0, truncated:false, success:true` result was therefore
-  indistinguishable from "this gene has no renal phenotype in mouse". Every
-  `get_marker_phenotypes` and `get_phenotype_overview` response now carries an explicit
-  scope flag — `scope: "single_locus_genotypes_only"`, `excludes_conditional_genotypes:
-  true`, and a `scope_note` — so a zero/partial count is self-describing, and the
-  `get_phenotype_overview` description no longer claims MGI-gene-page parity.
+  indistinguishable from "this gene has no renal phenotype in mouse". EVERY path that
+  reads the single-locus `genopheno` population now carries the scope —
+  `get_marker_phenotypes`, `get_phenotype_overview`, and `find_markers_by_phenotype`
+  each return `scope: "single_locus_genotypes_only"` + `excludes_conditional_genotypes:
+  true` + a `scope_note`, and `get_marker`'s summary counts carry `phenotype_scope` — so
+  no zero/partial count looks authoritative, and the `get_phenotype_overview` description
+  no longer claims MGI-gene-page parity.
 - **An invalid `mp_system` listed 2 of ~25 valid systems (issue #28, D2).** The error's
   `allowed_values` ran through the envelope's whitespace-free sanitiser, which dropped
   every multi-word system name — leaving only `mortality/aging` and `neoplasm`. The
-  vocabulary is server-controlled (the local MP ontology), so it is now surfaced in full
-  via a trusted-label channel (`InvalidInputError(allowed_trusted=True)`); the error lists
-  all 28 top-level systems, including the (valid) `renal/urinary system phenotype`.
+  vocabulary is now surfaced in full via a trusted-label channel
+  (`InvalidInputError(allowed_trusted=True)`); the error lists all 28 top-level systems,
+  including the (valid) `renal/urinary system phenotype`. The emitted names are filtered
+  through a curated server-controlled allowlist (`MP_TOP_SYSTEM_NAMES`), so a label from
+  the downloaded MP OBO (external data) can never reach the caller.
 - **`marker_type` / `allele_type` silently matched nothing on an unrecognised value.** A
   bogus filter value returned `success:true` with zero rows (the silent-empty-filter
   class). Both now reject an unrecognised value with `invalid_input`, naming the full
@@ -42,8 +46,12 @@ All notable changes to mgi-link are documented here.
 - **Tool surface trimmed 6,497 → ~4,200 tokens** by suppressing every tool's
   `outputSchema` (`output_schema=None`, 39% → 0% of surface — the structured envelope is
   unchanged) and emitting compact input schemas (`dereference_schemas=False`).
-- **Schema documentation:** required search parameters and the `marker_type`/`allele_type`
-  filters now carry `examples`, so every tool is probeable (0 UNGATED).
+- **Schema documentation:** `marker_type` and `allele_type` are declared as schema
+  `enum`s (derived from the constants, so no drift; the runtime stays a superset —
+  case-insensitive marker types and allele aliases still resolve), so a schema-validating
+  client rejects an unknown value before the call; required search parameters carry
+  `examples`, so every tool is probeable (0 UNGATED). The discovery surface
+  (`get_server_capabilities`, `mgi://reference`) advertises the six-code enum.
 
 ### Testing
 

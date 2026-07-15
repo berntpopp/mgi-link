@@ -60,8 +60,8 @@ MGI_USAGE_NOTES = (
 )
 
 MGI_REFERENCE_NOTES = (
-    "Error codes: invalid_input, not_found, ambiguous_query, data_unavailable, "
-    "rate_limited, upstream_unavailable, internal_error. match_type on "
+    "Error codes: invalid_input, not_found, ambiguous_query, upstream_unavailable, "
+    "rate_limited, internal. match_type on "
     "resolve_marker is mgi_id | current | synonym | ortholog (ortholog = resolved "
     "from a human gene). The local index is built from the MGI bulk reports "
     "(MRK_List2, MGI_PhenotypicAllele, MGI_GenePheno, VOC_MammalianPhenotype, "
