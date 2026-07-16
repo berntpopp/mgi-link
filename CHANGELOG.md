@@ -4,13 +4,13 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-15
+
 ### Changed
 
 - Re-vendored the behaviour conformance gate from genefoundry-router `56db958`
   (`docs/conformance/behaviour.py` blob `c69801687`) so live MCP contract checks
   treat not-found example probes as inconclusive and keep empty auxiliary objects from hiding counted rows.
-
-## [0.6.0] - 2026-07-15
 
 ### Fixed
 
