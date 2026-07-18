@@ -1,6 +1,8 @@
 # mgi-link MCP — Evaluation Remediation Design
 
 **Date:** 2026-06-12
+> Historical record
+
 **Author:** MCP engineering (remediation of `MCP_EVALUATION.md`)
 **Status:** Approved for implementation (autonomous end-to-end execution)
 **Target:** Lift the live black-box grade from **B+ (7.5/10)** to **>9.5/10** by closing

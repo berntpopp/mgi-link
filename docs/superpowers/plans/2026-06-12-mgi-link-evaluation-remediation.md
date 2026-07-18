@@ -1,5 +1,7 @@
 # mgi-link Evaluation Remediation — Implementation Plan
 
+> Historical record
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Close all ten findings (F1–F10) from `MCP_EVALUATION.md` to lift the live grade from B+ (7.5/10) to >9.5/10, prioritising grounding safety (silent truncation).
