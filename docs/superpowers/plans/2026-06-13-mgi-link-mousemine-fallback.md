@@ -1,5 +1,7 @@
 # MouseMine Cold-Start Fallback Implementation Plan
 
+> Historical record
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** When the local SQLite index is unavailable AND `enable_live_fallback=True`, serve `resolve_marker` and `get_marker` from a live MouseMine (InterMine) query instead of returning `data_unavailable`; every other tool and the index-present path are unchanged.

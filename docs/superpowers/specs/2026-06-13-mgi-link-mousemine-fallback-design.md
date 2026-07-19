@@ -2,6 +2,8 @@
 
 **Date:** 2026-06-13
 **Status:** Approved (autonomous implementation)
+> Historical record
+
 **Author:** Claude (MCP engineering)
 **Target:** Implement the optional live MouseMine fallback declared in the base
 design spec (`2026-06-12-mgi-link-design.md` §2/§4) but deferred at v0.2.0 — the
