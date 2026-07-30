@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mgi-link"
-version = "0.6.0"
+version = "0.6.1"
 description = "MCP/API server that grounds mouse-genetics work in the MGI (Mouse Genome Informatics) dataset"
 readme = "README.md"
 license = { text = "MIT" }
@@ -72,7 +72,11 @@ line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
-extend-select = [
+# `select` (not `extend-select`): this list IS the enforced policy. It already
+# supersets ruff's historical default (E4/E7/E9 + F), so the enforced rule set is
+# unchanged — but it no longer silently absorbs whatever ruff decides to enable by
+# default (0.16 grew the implicit default from 59 to 413 rules).
+select = [
     "E", "W", "F", "I", "N", "UP", "B", "C4", "S", "T20", "SIM", "RUF",
 ]
 ignore = [

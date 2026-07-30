@@ -4,6 +4,66 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-07-30
+
+### Added
+
+- **Dependabot coverage — this repo had never had a `.github/dependabot.yml`.**
+  Its "zero open Dependabot PRs" was the absence of a watcher, not health: the
+  Python lock, the pinned GitHub Actions and the container base image had never
+  been auto-bumped since the repo was created. Now watched on the fleet schedule
+  (weekly Monday, Europe/Berlin, staggered) across all four ecosystems that exist
+  here: `uv` at `/`, `github-actions` at `/`, and `docker` + `docker-compose` at
+  `/docker`.
+
+### Changed
+
+- **Swept the drift the missing watcher hid.** First blanket `uv lock --upgrade`:
+  30 packages moved, including fastapi 0.136.3 → 0.141.1, uvicorn 0.49.0 →
+  0.52.0, mcp 1.28.1 → 1.29.0, fastmcp 3.4.4 → 3.4.5, typer 0.26.7 → 0.27.0,
+  pytest 9.0.3 → 9.1.1, mypy 2.1.0 → 2.3.0, ruff 0.15.17 → 0.16.0. Dependency
+  floors are unchanged — this repo states generous compatibility minimums with a
+  next-major cap rather than mirroring the lock, and every cap still holds.
+- **Container re-based on `python:3.14-slim`** (digest `cea0e60`), from
+  `python:3.12-slim` (digest `423ed6a`) — two Python minors of unpatched runtime
+  drift, and the last `-link` image still on 3.12. Verified by building the
+  `production` target and smoke-importing the MCP facade in the image
+  (python 3.14.6), not by inspection: the Dockerfile's hardening steps are
+  Debian-release-sensitive. CI still tests on Python 3.12, which
+  `requires-python = ">=3.12"` continues to cover. `container-release.json`'s
+  `data.image_allowlist` moved with it — it names interpreter-versioned
+  `site-packages` paths, so the release gate's OCI content inspection fails if
+  the two disagree.
+- **Pinned GitHub Actions bumped**: `actions/checkout` v7.0.0 (and a stray v6.0.3
+  in the container-security workflow) → v7.0.1, `actions/setup-python` v6.3.0 →
+  v7.0.0, `astral-sh/setup-uv` v8.2.0 → v9.0.0. Every SHA was resolved back to
+  its tag before use, dereferencing annotated tags.
+- **`ruff` config uses `select`, not `extend-select`.** ruff 0.16 grows the
+  implicit default rule set from 59 to 413 rules, which `extend-select` would
+  have silently absorbed. The rule list is byte-identical and already supersets
+  ruff's historical default, so the enforced policy is unchanged.
+
+### Fixed
+
+- **A pinned-action version comment named a moving alias.** `github/codeql-action`
+  was commented `# v4`; that SHA is an annotated tag object dereferencing to the
+  same commit as tag v4.35.3, so the comment now names the artefact it actually
+  pins. The SHA is unchanged.
+- `docs/deployment.md` said the image was built on `python:3.12-slim`.
+- `CITATION.cff` still declared `version: 0.5.7` against a 0.6.0 release.
+
+### Notes
+
+- CodeQL alert #1 (`py/clear-text-logging-sensitive-data`, HIGH, `envelope.py`)
+  was triaged as a **false positive** and dismissed: the flagged "secret" is the
+  return of `_validated_trusted_allowed_values()` — public MP-ontology system
+  labels and marker/allele types that `get_server_capabilities` already
+  advertises — classified as a secret purely because the identifier contains
+  "trusted". The logged expression is `envelope["error_code"]`, a closed
+  six-value enum assigned from `_classify()`, never the flagged value. No code
+  change; silencing it by rewriting working sanitisation code would have been
+  worse than the alert.
+
 ## [0.6.0] - 2026-07-15
 
 ### Changed
