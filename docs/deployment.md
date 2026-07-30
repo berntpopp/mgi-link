@@ -62,7 +62,7 @@ make docker-logs
 make docker-url     # prints the MCP URL + a `claude mcp add` line
 ```
 
-The Dockerfile is multi-stage (`python:3.12-slim`, `uv sync --frozen --no-dev`),
+The Dockerfile is multi-stage (`python:3.14-slim`, `uv sync --frozen --no-dev`),
 runs as a non-root user, persists `/app/data` (the ~370 MB index) in the
 `mgi-data` named volume, and has a `/health` healthcheck with a long
 `start-period` to cover the first build. `entrypoint.sh` runs
