@@ -30,7 +30,10 @@ All notable changes to mgi-link are documented here.
   `production` target and smoke-importing the MCP facade in the image
   (python 3.14.6), not by inspection: the Dockerfile's hardening steps are
   Debian-release-sensitive. CI still tests on Python 3.12, which
-  `requires-python = ">=3.12"` continues to cover.
+  `requires-python = ">=3.12"` continues to cover. `container-release.json`'s
+  `data.image_allowlist` moved with it — it names interpreter-versioned
+  `site-packages` paths, so the release gate's OCI content inspection fails if
+  the two disagree.
 - **Pinned GitHub Actions bumped**: `actions/checkout` v7.0.0 (and a stray v6.0.3
   in the container-security workflow) → v7.0.1, `actions/setup-python` v6.3.0 →
   v7.0.0, `astral-sh/setup-uv` v8.2.0 → v9.0.0. Every SHA was resolved back to
