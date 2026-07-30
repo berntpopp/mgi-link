@@ -4,6 +4,35 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-07-30
+
+### Changed
+
+- **CI runs a Python matrix (`3.12`, `3.14`) instead of a single 3.12 job.** This
+  repo was the starkest case of the shipped-vs-tested interpreter gap in the fleet:
+  `docker/Dockerfile` ships `python:3.14-slim` in both build stages and
+  `container-release.json`'s `data.image_allowlist` already names
+  `opt/venv/lib/python3.14/site-packages/...` paths, while every quality gate ran on
+  3.12. The image was exercised on 3.14 by `container-ci`/`conformance`, but a
+  3.14-only stdlib or typing regression inside `mgi_link/` would have reached
+  production without a single test having run on that interpreter. This is a matrix,
+  not a swap: 3.12 stays because it is the declared `requires-python` floor, and
+  dropping it would make that floor a false claim. The coverage gate still runs once,
+  on 3.14.
+- Added the `Programming Language :: Python :: 3.14` classifier, which the matrix now
+  backs with evidence.
+
+### Notes
+
+- `requires-python` deliberately stays `>=3.12`, ruff's `target-version` stays `py312`
+  and mypy's `python_version` stays `3.12`. All three track the supported *floor*, not
+  the shipped interpreter: `>=3.12` is satisfied by the 3.14 container, and a `py314`
+  ruff target would let the `UP` rules rewrite code into syntax the declared floor
+  cannot run. Raising the floor would also contradict the `Python 3.12+` badge that
+  README Standard v1 pins by exact string in the vendored `scripts/check_readme.py`.
+- `docker/Dockerfile` and `container-release.json` are unchanged; both already named
+  3.14. This release only closes the gap between what CI tests and what the image runs.
+
 ## [0.6.1] - 2026-07-30
 
 ### Added
