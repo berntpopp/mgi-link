@@ -4,6 +4,22 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-08-10
+
+Maintenance release for the consolidated Dependabot refresh. No application
+behaviour changed.
+
+### Changed
+
+- Refreshed the locked Python dependency set, including the coordinated
+  `cryptography` 50.0.0 update, and raised exercised dependency floors for
+  uvicorn, Typer, FastMCP, and Ruff to match the resolved environment.
+- Updated both Python 3.14 container stages to the refreshed digest-pinned
+  `python:3.14-slim` base.
+- Re-pinned the reusable container CI and release workflows to the released
+  GeneFoundry router v0.7.6 standard at
+  `84c6ac1fc0eb26f7dfa093cc6394eee3c44d4222`.
+
 ## [0.6.2] - 2026-07-30
 
 ### Changed
