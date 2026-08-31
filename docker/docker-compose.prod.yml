@@ -35,7 +35,7 @@ services:
     cap_drop: !override
       - ALL
     init: true
-    restart: on-failure
+    restart: unless-stopped
     pids_limit: !reset null
     deploy:
       resources:

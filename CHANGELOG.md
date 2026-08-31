@@ -4,6 +4,11 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-08-31
+
+- Updated fleet dependencies and immutable CI action pins, including the trusted
+  router container workflows.
+
 ## [0.6.3] - 2026-08-10
 
 Maintenance release for the consolidated Dependabot refresh. No application
