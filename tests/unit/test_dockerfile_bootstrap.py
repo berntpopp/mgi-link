@@ -21,3 +21,12 @@ def test_dockerfile_pins_uv_and_has_no_floating_pip_upgrade() -> None:
     text = (ROOT / "docker" / "Dockerfile").read_text(encoding="utf-8")
     assert "pip install --upgrade" not in text, "floating pip/uv upgrade must be removed"
     assert UV_PINNED in text, "uv must be bootstrapped from the digest-pinned image via COPY --from"
+
+
+def test_prepared_stage_applies_current_debian_security_upgrades() -> None:
+    prepared_stage = (
+        (ROOT / "docker" / "Dockerfile")
+        .read_text(encoding="utf-8")
+        .split(" AS prepared", maxsplit=1)[1]
+    )
+    assert "apt-get upgrade -y --no-install-recommends" in prepared_stage

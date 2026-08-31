@@ -30,3 +30,8 @@ def test_base_compose_binds_published_ports_to_loopback() -> None:
             "binds 0.0.0.0 and bypasses the host firewall. Production reaches it "
             "only via the router/reverse proxy."
         )
+
+
+def test_production_server_uses_an_approved_restart_policy() -> None:
+    production = (ROOT / "docker" / "docker-compose.prod.yml").read_text(encoding="utf-8")
+    assert "restart: unless-stopped" in production
