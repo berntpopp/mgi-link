@@ -4,6 +4,11 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.6.5] - 2026-09-02
+
+- Deploy: declare the image's numeric uid:gid in docker/docker-compose.npm.yml so the fleet
+  controller can deploy the service; a guard test keeps `user` out of the release Compose files.
+
 ## [0.6.4] - 2026-08-31
 
 - Updated fleet dependencies and immutable CI action pins, including the trusted
