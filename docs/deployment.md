@@ -69,6 +69,36 @@ runs as a non-root user, persists `/app/data` (the ~370 MB index) in the
 `mgi-link-data refresh` before serving so the request path never triggers a lazy
 build.
 
+## Fleet deploy contract (strato_v6_docker_npm)
+
+`docker/docker-compose.npm.yml` is the overlay the fleet controller repo
+(`strato_v6_docker_npm`) actually deploys and validates — it pulls the
+released, attested `ghcr.io/berntpopp/mgi-link` image at a pinned digest and
+never builds from source. Every service in that file must declare a numeric
+`user: "<uid>:<gid>"` (currently `999:999`, this image's own uid:gid from
+`docker/Dockerfile`) because the controller's runtime observer proves the
+effective uid from `/proc`. The release Compose files named in
+`container-release.json` (`docker/docker-compose.yml`,
+`docker/docker-compose.prod.yml`) must **not** declare `user` — the shared
+release gate (`container_release.py validate-compose`) forbids it there.
+`tests/unit/test_deploy_overlay_user.py` guards both rules.
+
+Release checklist enforced by this repo: bump `pyproject.toml`, run `uv lock`,
+add a `CHANGELOG.md` heading `## [x.y.z] - YYYY-MM-DD`, bump `CITATION.cff`
+`version:` (generated file; `date-released` is regenerated externally by
+`genefoundry-router`'s `make citation-write`, not by this repo's release),
+tag `vx.y.z`, then approve the `release` environment gate:
+`gh api repos/berntpopp/mgi-link/actions/runs/<id>/pending_deployments`
+(`status: waiting` marks the gate; may need approving twice).
+
+Self-check that the overlay still projects cleanly for the fleet controller:
+
+```bash
+MGI_LINK_IMAGE="ghcr.io/berntpopp/mgi-link@sha256:<64 hex>" docker compose -f docker/docker-compose.npm.yml config --format json > /tmp/r.json
+# from strato_v6_docker_npm:
+uv run python -c "import sys,json; sys.path.insert(0,'scripts'); from utils.deployment_preflight import canonical_projection; canonical_projection(json.load(open('/tmp/r.json')), project='mgi-link'); print('PROJECTION OK')"
+```
+
 ## Configuration
 
 All settings use the `MGI_LINK_` prefix; nested config uses `__`. The full
