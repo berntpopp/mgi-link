@@ -42,6 +42,28 @@ architecture. Read this before changing code.
 - **Identifiers** are normalised in `identifiers.py` (MGI:NNNN / bare NNNN /
   MP:NNNNNNN). Tools never parse ids by hand.
 
+### Fleet deploy contract
+
+- `docker/docker-compose.npm.yml` is the file the fleet controller
+  (`strato_v6_docker_npm`) deploys and validates. Every service there declares
+  `user: "<uid>:<gid>"` numerically — this image's own uid:gid from
+  `docker/Dockerfile` (currently `999:999`), never copied from a sibling
+  `-link` repo.
+- `user` must **not** appear in the Compose files listed in
+  `container-release.json` (`docker/docker-compose.yml`,
+  `docker/docker-compose.prod.yml`) — the shared release gate
+  (`container_release.py validate-compose`) forbids it there.
+- Both rules are enforced by `tests/unit/test_deploy_overlay_user.py`.
+- **Release checklist** (fleet controller pulls a tagged, attested image — it
+  never builds from source): bump `pyproject.toml`, `uv lock`, add a
+  `CHANGELOG.md` heading `## [x.y.z] - YYYY-MM-DD`, bump `CITATION.cff`
+  `version:` (the file is generated — see its header comment; `date-released`
+  is **not** touched by this repo's release process, it is regenerated
+  externally by `genefoundry-router`'s `make citation-write`), tag `vx.y.z`,
+  then approve the `release` environment gate via
+  `gh api repos/berntpopp/mgi-link/actions/runs/<id>/pending_deployments`
+  (may need approving twice; `status: waiting` is the gate).
+
 ## Data plane
 
 - The index is built from MGI bulk reports (`config.REPORT_FILENAMES`). The
