@@ -12,7 +12,10 @@
     "container_port": 8000,
     "health_path": "/health",
     "mcp_path": "/mcp",
-    "startup_timeout_seconds": 300
+    "startup_timeout_seconds": 300,
+    "deployed_compose_files": [
+      "docker/docker-compose.npm.yml"
+    ]
   },
   "data": {
     "mode": "upstream-live",
