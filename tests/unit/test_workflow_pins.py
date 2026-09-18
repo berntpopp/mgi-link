@@ -3,9 +3,9 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-ROUTER_SHA = "31ea81cee5475fc3655c047c63a89739948f99a9"
-SETUP_UV_SHA = "20cfd1bf945f4377ade1205e4dbc17946fc9a30d"
-CODEQL_SHA = "ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd"
+ROUTER_SHA = "adfc1cffed6530d6453c9dbb40be5f4c5884b8a2"
+SETUP_UV_SHA = "bec219d24cd3e171d82865faccec33120bb574f4"
+CODEQL_SHA = "b96794f015dfd88f77b49b1c93e0fa7110f94c63"
 
 
 def test_release_workflows_pin_the_trusted_router_and_actions() -> None:
