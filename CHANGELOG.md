@@ -4,6 +4,13 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.6.6] - 2026-09-18
+
+- Consolidated Dependabot updates for python dependencies (pydantic, typer, ruff, mypy).
+- Configured Dependabot groups for uv and github-actions ecosystems.
+- Updated reusable workflows to genefoundry-router v0.9.1.
+- Updated action pins for setup-uv (v10.1.0) and codeql-action (v4.38.0).
+
 ## [0.6.5] - 2026-09-02
 
 - Deploy: declare the image's numeric uid:gid in docker/docker-compose.npm.yml so the fleet
