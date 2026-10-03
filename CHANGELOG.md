@@ -1,5 +1,9 @@
 # Changelog
 
+## [{v}] - 2026-10-03
+
+- Update FastAPI and pytest-mock to the current dependency releases.
+
 All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
