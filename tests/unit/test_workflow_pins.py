@@ -3,7 +3,7 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-ROUTER_SHA = "adfc1cffed6530d6453c9dbb40be5f4c5884b8a2"
+ROUTER_SHA = "0122f6e6d8f6a9057b80134d7cacbf61c5bd2e84"
 SETUP_UV_SHA = "c18668ad3cf93ea998bef934396af7bb5c839dc7"
 CODEQL_SHA = "2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2"
 
