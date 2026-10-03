@@ -4,6 +4,9 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.6.8] - 2026-10-03
+
+- Update FastAPI and pytest-mock to the current dependency releases.
 
 ## [0.6.7] - 2026-10-03
 
