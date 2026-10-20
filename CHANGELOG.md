@@ -4,6 +4,16 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.6.9] - 2026-10-20
+
+### Security
+
+- Upgrade `mcp` to 1.30.0 (fixes GHSA for unbounded session accumulation in the StreamableHTTP transport) and raise the `mcp[cli]` floor to `>=1.30.0`.
+
+### Changed
+
+- Update locked Python dependencies (fastapi, pydantic, pydantic-core, pydantic-settings, orjson, typer, typing-inspection, librt, ast-serialize, mypy, ruff) and GitHub Actions (setup-uv v10.3.0, upload-artifact v7.0.2, codeql-action v4.38.3); pin reusable container workflows to genefoundry-router v0.10.4.
+
 ## [0.6.8] - 2026-10-03
 
 - Update FastAPI and pytest-mock to the current dependency releases.
