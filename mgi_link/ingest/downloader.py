@@ -80,7 +80,7 @@ def _read_cache(config: MgiDataConfig) -> dict[str, dict[str, str | None]]:
         return {}
     try:
         data = json.loads(cache_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
+    except json.JSONDecodeError, OSError:
         return {}
     return data if isinstance(data, dict) else {}
 
@@ -99,7 +99,7 @@ def _int_or_none(value: str | None) -> int | None:
         return None
     try:
         return int(value)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
 
 
