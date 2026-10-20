@@ -21,13 +21,11 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Typing :: Typed",
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.115.0,<1.0.0",
     "uvicorn[standard]>=0.52.3,<1.0.0",
@@ -70,7 +68,9 @@ include = ["server.py", "mcp_server.py"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py314"
+# Vendored fleet file: must stay byte-identical to genefoundry-router docs/conformance/.
+extend-exclude = ["tests/conformance/behaviour.py"]
 
 [tool.ruff.lint]
 # `select` (not `extend-select`): this list IS the enforced policy. It already
@@ -102,7 +102,7 @@ line-ending = "lf"
 convention = "google"
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.14"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
