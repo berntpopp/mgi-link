@@ -4,6 +4,13 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.6.11] - 2026-10-28
+
+### Security
+
+- Authlib 1.9.1 (CVE-2026-96760 critical, CVE-2026-114615/114616 high) and dnspython 2.9.0
+  (CVE-2026-114605 high); both transitive, lock-only bump.
+
 ## [0.6.10] - 2026-10-20
 
 ### Security
