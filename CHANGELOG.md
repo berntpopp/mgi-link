@@ -4,6 +4,17 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.6.13] - 2026-11-11
+
+### Security
+
+- fastmcp/fastmcp-slim 3.4.11 and opentelemetry-api 1.45.2 (medium advisories fixed in 3.4.10 / 1.45.1);
+  full lock refresh; floor `fastmcp>=3.4.10,<4.0.0`.
+
+### Changed
+
+- GitHub Actions pins: setup-python v7.1.0, setup-uv v10.3.3, codeql-action v4.39.1.
+
 ## [0.6.12] - 2026-10-28
 
 ### Fixed
