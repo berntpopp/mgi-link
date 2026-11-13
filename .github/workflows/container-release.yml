@@ -17,4 +17,4 @@ permissions:
 
 jobs:
   release:
-    uses: berntpopp/genefoundry-router/.github/workflows/_container-release.yml@5fed6be02ea0a598b56f7d1a69efcc47ff5796c8 # genefoundry-router v0.10.10
+    uses: berntpopp/genefoundry-router/.github/workflows/_container-release.yml@bda1aca30ea885b4ea9ebe6d23e07bacd15dd643 # genefoundry-router v0.10.14
