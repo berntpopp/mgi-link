@@ -7,9 +7,13 @@ rebuild — the cron job), and ``status`` (print provenance of the existing DB).
 
 from __future__ import annotations
 
+import json
+from email.utils import parsedate_to_datetime
+from pathlib import Path
+
 import typer
 
-from mgi_link.config import get_data_config
+from mgi_link.config import REPORT_FILENAMES, get_data_config
 from mgi_link.exceptions import DownloadError
 from mgi_link.ingest.builder import BuildMeta, build_database, read_meta, rebuild
 from mgi_link.ingest.downloader import download_bulk
@@ -37,7 +41,13 @@ def _print_summary(meta: BuildMeta, *, header: str) -> None:
 
 
 @app.command()
-def build() -> None:
+def build(
+    reproducible: bool = typer.Option(
+        False,
+        "--reproducible",
+        help="Pin build_utc to the newest report Last-Modified so the file is byte-reproducible.",
+    ),
+) -> None:
     """Force a download and full rebuild of the database."""
     config = get_data_config()
     try:
@@ -46,8 +56,38 @@ def build() -> None:
         print(f"ERROR: download failed: {exc}")
         raise typer.Exit(code=1) from exc
     paths = {key: download.path(key) for key in download.results}
-    meta = build_database(config, paths=paths, validators=download.validators())
+    validators = download.validators()
+    build_utc = None
+    if reproducible:
+        stamps = [v["last_modified"] for v in validators.values()]
+        if set(validators) != set(REPORT_FILENAMES) or not all(stamps):
+            print("ERROR: --reproducible needs every report and its Last-Modified header.")
+            raise typer.Exit(code=1)
+        build_utc = max(parsedate_to_datetime(str(stamp)) for stamp in stamps).isoformat()
+    meta = build_database(config, paths=paths, validators=validators, build_utc=build_utc)
     _print_summary(meta, header="Built MGI database:")
+
+
+@app.command()
+def package(
+    output: Path = typer.Option(..., help="New directory for the release assets."),
+    revision: str = typer.Option(..., help="Full commit SHA of the transformation code."),
+    authorization: Path = typer.Option(
+        Path("release/data-authorization.json"), help="Owner redistribution authorization."
+    ),
+) -> None:
+    """Package the reproducibly built database as data-release assets; print the manifest."""
+    from mgi_link.ingest.release import package_release
+
+    config = get_data_config()
+    manifest = package_release(
+        config.db_path,
+        reports={key: config.data_dir / name for key, name in REPORT_FILENAMES.items()},
+        authorization=authorization,
+        output=output,
+        revision=revision,
+    )
+    print(json.dumps(manifest, indent=2, sort_keys=True))
 
 
 @app.command()

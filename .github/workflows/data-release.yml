@@ -1,0 +1,134 @@
+name: Data release
+
+# Builds the MGI SQLite index reproducibly from ONE download of each MGI public
+# report (`mgi-link-data build --reproducible`) and publishes it as an
+# immutable, attested, content-addressed GitHub release (`data-mgi-<sha16>`).
+# Unchanged reports rebuild to the same bytes and the same tag, so they are
+# never published twice. Publication waits on the `data-release` environment
+# (owner review, `main` only); the `release` environment stays restricted to
+# `v*.*.*` tags. The owner's redistribution authorization is read from
+# release/data-authorization.json and ships as a release asset. The app pins a
+# published tag + digest in a reviewed PR; nothing here changes what runs.
+
+on:
+  schedule:
+    # MGI regenerates its public reports weekly; check Tuesday morning.
+    - cron: "41 7 * * 2"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: mgi-data-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build data release
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      exists: ${{ steps.meta.outputs.exists }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: false
+          version: "0.8.7"
+      - run: uv sync --frozen --no-dev
+      - name: Download once and build reproducibly, without publish credentials
+        env:
+          MGI_LINK_DATA__DATA_DIR: ${{ runner.temp }}/data
+        run: |
+          set -euo pipefail
+          uv run --frozen --no-dev mgi-link-data build --reproducible
+          uv run --frozen --no-dev mgi-link-data package \
+            --output "$RUNNER_TEMP/release" --revision "$GITHUB_SHA" > "$RUNNER_TEMP/manifest.json"
+      - name: Verify assets and resolve the content-addressed tag
+        id: meta
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/release"
+          test "$(ls -A | LC_ALL=C sort | paste -sd,)" = "SHA256SUMS,data-authorization.json,mgi.sqlite.gz,manifest.json"
+          sha256sum --check SHA256SUMS
+          cmp manifest.json "$RUNNER_TEMP/manifest.json"
+          tag="$(jq -er '.release_tag | select(test("^data-mgi-[0-9a-f]{16}$"))' manifest.json)"
+          jq -er --arg rev "$GITHUB_SHA" '.transformation.revision == $rev' manifest.json >/dev/null
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          # Only a published release counts; a leftover draft is replaced by publish.
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$tag is already published; the upstream reports are unchanged."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+          jq -r '"MGI data snapshot `\(.release_tag)` (research use only; not clinical decision support).\n\n- Upstream: MGI public reports at \(.source.reports_base_url) (newest Last-Modified \(.transformation.build_utc)); per-report sha256 in manifest.json.\n- \(.record_counts.markers) markers, \(.record_counts.alleles) alleles, \(.record_counts.genopheno) genotype-phenotype rows, \(.record_counts.mp_terms) MP terms, \(.record_counts.orthologs) orthologs, \(.record_counts.disease_models) disease models; data schema \(.data_schema_version).\n- Built by `mgi-link-data build --reproducible` from commit `\(.transformation.revision)`.\n- `mgi.sqlite.gz` sha256 `\(.compressed_sha256)` (this is the digest the app pins); expanded sha256 `\(.expanded_sha256)`.\n- License: \(.license.spdx) (\(.license.terms_url)). Redistribution authorized by \(.authorization.reviewer) on \(.authorization.reviewed_at); see data-authorization.json. This records the repository owner decision, not an approval by MGI or The Jackson Laboratory.\n\nAttribution: \(.attribution)"' \
+            manifest.json > "$RUNNER_TEMP/release-notes.md"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mgi-data-${{ steps.meta.outputs.tag }}
+          path: |
+            ${{ runner.temp }}/release
+            ${{ runner.temp }}/release-notes.md
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish data release
+    needs: build
+    if: github.ref == 'refs/heads/main' && needs.build.outputs.exists == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: data-release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ needs.build.outputs.tag }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: mgi-data-${{ needs.build.outputs.tag }}
+          path: dist
+      - name: Verify transferred bytes
+        working-directory: dist/release
+        run: sha256sum --check SHA256SUMS
+      - name: Attest release assets
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/release/*
+      - name: Create a draft, upload and verify every asset, then publish
+        run: |
+          set -euo pipefail
+          cd dist/release
+          assets=(mgi.sqlite.gz manifest.json data-authorization.json SHA256SUMS)
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq ".[] | select(.tag_name == \"$TAG\" and .draft == true) | .id" \
+            | while read -r stale; do gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$stale"; done
+          gh release create "$TAG" "${assets[@]}" --repo "$GITHUB_REPOSITORY" \
+            --draft --latest=false --target "$GITHUB_SHA" --title "$TAG" --notes-file ../release-notes.md
+          remote="$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq "[.[] | select(.tag_name == \"$TAG\" and .draft == true)] | first")"
+          for asset in "${assets[@]}"; do
+            digest="sha256:$(sha256sum "$asset" | cut -d' ' -f1)"
+            jq -e --arg n "$asset" --arg d "$digest" --argjson s "$(stat -c %s "$asset")" \
+              '[.assets[] | select(.name == $n and .size == $s and .digest == $d)] | length == 1' \
+              <<<"$remote" >/dev/null
+          done
+          jq -e '.assets | length == 4' <<<"$remote" >/dev/null
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest=false
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" \
+            | jq -e --arg sha "$GITHUB_SHA" '.draft == false and .target_commitish == $sha and (.assets | length) == 4' >/dev/null

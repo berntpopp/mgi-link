@@ -327,8 +327,13 @@ def build_database(
     *,
     paths: dict[str, Path | None],
     validators: dict[str, dict[str, str | None]],
+    build_utc: str | None = None,
 ) -> BuildMeta:
-    """Build the MGI SQLite index from the report files, atomically."""
+    """Build the MGI SQLite index from the report files, atomically.
+
+    A pinned ``build_utc`` (reproducible release build) also drops the build
+    duration, so the same reports always yield the same file bytes.
+    """
     start = time.perf_counter()
     config.data_dir.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(dir=config.data_dir, suffix=".sqlite.tmp")
@@ -380,8 +385,8 @@ def build_database(
                 mp_term_count=mp_term_count,
                 ortholog_count=ortholog_count,
                 disease_count=disease_count,
-                build_utc=datetime.now(tz=UTC).isoformat(),
-                build_duration_s=round(time.perf_counter() - start, 3),
+                build_utc=build_utc or datetime.now(tz=UTC).isoformat(),
+                build_duration_s=None if build_utc else round(time.perf_counter() - start, 3),
             )
             _insert_meta(conn, meta)
             conn.commit()

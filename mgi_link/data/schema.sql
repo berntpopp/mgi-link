@@ -1,5 +1,6 @@
 -- mgi-link local index schema (built from the MGI bulk data reports).
-PRAGMA journal_mode = WAL;
+-- Rollback journal, not WAL: the released snapshot is served from a read-only mount.
+PRAGMA journal_mode = DELETE;
 PRAGMA foreign_keys = OFF;
 
 -- One row per mouse marker (MRK_List2.rpt), enriched with xrefs.
