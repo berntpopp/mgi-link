@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "dataset": "MGI public reports (MRK_List2, MGI_PhenotypicAllele, MGI_GenePheno, VOC_MammalianPhenotype, MPheno_OBO, HOM_MouseHumanSequence, MGI_DO, MRK_ENSEMBL) and the mgi-link SQLite index derived from them",
+  "redistribution_allowed": true,
+  "reviewer": "Repository owner (explicit operator decision recorded 2026-11-13, genefoundry-router#63 option A)",
+  "reviewed_at": "2026-11-13T00:00:00Z",
+  "interpretation": "This is the repository owner's determination that a derived research-use snapshot may be published as a GitHub release asset. It is not an approval, endorsement, or review by MGI or The Jackson Laboratory, and it is not a legal conclusion.",
+  "license": {
+    "spdx": "CC-BY-4.0",
+    "name": "Creative Commons Attribution 4.0 International",
+    "url": "https://creativecommons.org/licenses/by/4.0/",
+    "terms_url": "https://www.informatics.jax.org/mgihome/other/copyright.shtml",
+    "terms_retrieved": "2026-11-13",
+    "quote": "MGI data and annotations are licensed under a Creative Commons Attribution 4.0 International License (CC-BY). Images accessible from the website are the copyrighted work of the attributed author or publisher unless otherwise noted. MGI database resources have permission to display these images, but not to redistribute them. [...] The Mammalian Phenotype (MP) Ontology [...] are products of MGI and are licensed under a Creative Commons Attribution 4.0 International License (CC-BY).",
+    "content_restriction": "The snapshot contains no images. It holds MGI marker, allele, genotype-phenotype, MP ontology, mouse-human homology and disease-model rows from the MGI reports listed above; disease names are Disease Ontology labels and OMIM appears only as identifiers (no OMIM text)."
+  },
+  "attribution": "Mouse Genome Database (MGD) at the Mouse Genome Informatics website, The Jackson Laboratory, Bar Harbor, Maine. World Wide Web (URL: https://www.informatics.jax.org), data retrieved from the MGI public reports on the date in manifest.json. Licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Changes: derived SQLite index built by mgi-link from MGI reports (rows normalized, indexed, mouse disease-model rows only). Cite: Baldarelli RM, Smith CL, Bello SM, et al. Mouse Genome Informatics: an integrated knowledgebase system for the laboratory mouse. Genetics. 2024;227(1):iyae031. doi:10.1093/genetics/iyae031.",
+  "disclaimer": "Research use only; not clinical decision support. MGI and The Jackson Laboratory make no representation about the suitability or accuracy of this data for any purpose; the data are provided as is."
+}

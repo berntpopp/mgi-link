@@ -288,7 +288,8 @@ def mp_closure_pairs(terms: dict[str, dict[str, Any]]) -> Iterator[tuple[str, st
         return acc
 
     for mp_id in terms:
-        for anc in ancestors(mp_id, frozenset({mp_id})):
+        # sorted: set order follows the per-process string hash seed (reproducible builds).
+        for anc in sorted(ancestors(mp_id, frozenset({mp_id}))):
             yield (mp_id, anc)
 
 

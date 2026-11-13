@@ -4,6 +4,27 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- Data-release pipeline (genefoundry-router#63 option A): `mgi-link-data build --reproducible`
+  pins `build_utc` to the newest report `Last-Modified` and omits the build duration, so the
+  same reports always build to the same SQLite bytes; `mgi-link-data package` writes the
+  content-addressed `data-mgi-<sha16>` assets (gzip bundle, manifest, owner authorization,
+  `SHA256SUMS`). `.github/workflows/data-release.yml` downloads each report once per weekly run
+  and publishes through the owner-reviewed `data-release` environment.
+- `release/data-authorization.json`: the repository owner's 2026-11-13 redistribution decision
+  for the CC BY 4.0 MGI reports, with the MGI licence quote and the required attribution.
+
+### Fixed
+
+- `mp_closure` rows were written in per-process string-hash order, so two builds of the same
+  reports differed; they are now sorted.
+
+### Changed
+
+- The SQLite snapshot uses a rollback journal instead of WAL so it can be served from a
+  read-only mount.
+
 ## [0.6.14] - 2026-11-13
 
 ### Changed
