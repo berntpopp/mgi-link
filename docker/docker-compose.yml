@@ -1,8 +1,12 @@
 name: mgi-link
 
 services:
-  mgi-link:
-    build:
+  # Restores the pinned MGI data release (a `data-mgi-*` GitHub release of
+  # this repo, digest-verified) into the volume, then exits. Pins live in
+  # mgi_link/config.py and container-release.json; nothing is downloaded from
+  # informatics.jax.org at boot.
+  mgi-data-init:
+    build: &build
       context: ..
       dockerfile: docker/Dockerfile
       target: production
@@ -10,7 +14,42 @@ services:
         APP_VERSION: ${APP_VERSION:-0.0.0}
         VCS_REF: ${VCS_REF:-0000000000000000000000000000000000000000}
         BUILD_DATE: ${BUILD_DATE:-1970-01-01T00:00:00Z}
+    image: mgi-link:latest
+    command: ["mgi-link-data", "materialize-data"]
+    environment:
+      MGI_LINK_IMMUTABLE_DATA__REFERENCE_ROOT: /data
+    volumes:
+      - mgi-data:/data
+    restart: "no"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
+          pids: 256
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - mgi-network
+
+  mgi-link:
+    build: *build
+    image: mgi-link:latest
     container_name: mgi-link
+    depends_on:
+      mgi-data-init:
+        condition: service_completed_successfully
     # Dev/local only — loopback-bound (127.0.0.1) so copying this file to a
     # server never publishes the unauthenticated backend on the public IP
     # (Docker would otherwise bind 0.0.0.0 and bypass the host firewall).
@@ -31,26 +70,24 @@ services:
       MGI_LINK_ALLOWED_HOSTS: '["localhost","127.0.0.1","::1"]'
       MGI_LINK_LOG_LEVEL: INFO
       MGI_LINK_LOG_FORMAT: json
+      # Serve the restored release read-only (see docs/deployment.md).
       MGI_LINK_DATA__DATA_DIR: /data
-      MGI_LINK_DATA__AUTO_BOOTSTRAP: "true"
-      # Refresh is owned by cron (see docs/deployment.md). To refresh the running
-      # container, run a host cron job:
-      #   docker compose -f docker/docker-compose.yml exec mgi-link mgi-link-data refresh
+      MGI_LINK_DATA__DB_FILENAME: current/mgi.sqlite
+      MGI_LINK_DATA__AUTO_BOOTSTRAP: "false"
       MGI_LINK_DATA__REFRESH_ENABLED: "false"
     volumes:
-      # Persist the built ~73MB SQLite index across container restarts.
-      - mgi-data:/data
+      - mgi-data:/data:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "-H", "Host: localhost", "http://127.0.0.1:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 120s
+      start_period: 60s
     restart: unless-stopped
     # Container & Deployment Hardening Standard v1 (§2-4): mirror the npm overlay's
     # hardening on the base so running it directly is also safe. The rootfs is
-    # read-only; the only writable paths are the mgi-data volume (built SQLite
-    # index) and a tmpfs scratch (TMPDIR=/tmp for download/build).
+    # read-only; the mgi-data volume (restored SQLite index) is mounted read-only
+    # and the only writable path is a tmpfs scratch (TMPDIR=/tmp).
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=256m,mode=1777
@@ -71,26 +108,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    networks:
-      - mgi-network
-
-  # Optional: a one-shot refresh runner you can invoke from host cron, e.g.
-  #   17 3 * * *  docker compose -f /path/docker/docker-compose.yml run --rm refresh
-  refresh:
-    profiles: ["tools"]
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-      target: production
-      args:
-        APP_VERSION: ${APP_VERSION:-0.0.0}
-        VCS_REF: ${VCS_REF:-0000000000000000000000000000000000000000}
-        BUILD_DATE: ${BUILD_DATE:-1970-01-01T00:00:00Z}
-    entrypoint: ["mgi-link-data", "refresh"]
-    environment:
-      MGI_LINK_DATA__DATA_DIR: /data
-    volumes:
-      - mgi-data:/data
     networks:
       - mgi-network
 

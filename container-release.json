@@ -15,10 +15,26 @@
     "startup_timeout_seconds": 300,
     "deployed_compose_files": [
       "docker/docker-compose.npm.yml"
+    ],
+    "auxiliary": [
+      {
+        "name": "mgi-data-init",
+        "role": "init",
+        "egress": "approved-networks",
+        "writable_targets": [
+          "/data",
+          "/tmp"
+        ]
+      }
     ]
   },
   "data": {
-    "mode": "upstream-live",
+    "mode": "external-reference",
+    "release_tag": "data-mgi-5f11fe44b4ba9e20",
+    "digest": "sha256:d1e614537043ed14fd2dd784e1e41b061396c97261a9fbf45a902f950aa85e40",
+    "schema_compatibility": [
+      "1"
+    ],
     "image_allowlist": [
       "home/app/web/mgi_link/data/__init__.py",
       "home/app/web/mgi_link/data/repository.py",
@@ -32,25 +48,13 @@
       "opt/venv/lib/python3.14/site-packages/mgi_link/data/repository.py",
       "opt/venv/lib/python3.14/site-packages/mgi_link/data/repository_ontology.py",
       "opt/venv/lib/python3.14/site-packages/mgi_link/data/schema.sql"
-    ],
-    "egress_allowlist": [
-      "www.informatics.jax.org",
-      "www.mousemine.org"
-    ],
-    "release_tag": "observed-2026.07.13",
-    "digest": "sha256:1efd2fe47b73ce84f486eff9a8d3ad9262be98e3c944cda9460672f33cfac717",
-    "reproducible_rollback": false
+    ]
   },
-  "data_identity_contract": "unadopted",
-  "runtime_cache": {
-    "path": "/data",
-    "eviction": "operator-managed persistent SQLite cache rebuilt from the declared upstream live sources",
-    "deletable_without_authoritative_data_loss": true
-  },
+  "data_identity_contract": "runtime-v1",
   "definitions": {
     "contract": "data-bound"
   },
   "smoke": {
-    "profile": "prepared-live-fixture"
+    "profile": "immutable-bundle"
   }
 }

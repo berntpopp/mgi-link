@@ -1,6 +1,6 @@
 """Cross-process advisory lock that serializes database builds.
 
-The entrypoint build, the optional in-process refresh, and any external cron all
+A local build, the optional in-process refresh, and any external cron all
 funnel through ``mgi-link-data``/``rebuild``. This lock ensures only one of them
 downloads + rebuilds at a time, so they never clobber each other's temp file.
 

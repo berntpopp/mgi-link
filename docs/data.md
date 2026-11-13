@@ -28,9 +28,12 @@ never hardcoded.
 
 ## Refresh model
 
-MGI publishes new reports roughly **weekly**. Refresh is owned by an **external
-cron job**; the in-process scheduler is **off by default**
-(`MGI_LINK_DATA__REFRESH_ENABLED=false`).
+MGI publishes new reports roughly **weekly**. **Containers** do not refresh: they
+serve the pinned `data-mgi-*` data release built weekly by
+`.github/workflows/data-release.yml` (see
+[deployment.md](deployment.md#data-releases-and-re-pinning)). In a **source
+checkout**, refresh is owned by an **external cron job**; the in-process scheduler
+is **off by default** (`MGI_LINK_DATA__REFRESH_ENABLED=false`).
 
 ```bash
 mgi-link-data build     # force a full download + rebuild
@@ -42,8 +45,7 @@ mgi-link-data status    # print the provenance of the existing DB
 published a new release every report returns `304` and no rebuild happens. The
 build is atomic (temp file + `os.replace`) under an `fcntl` lock, so a refresh
 never exposes a half-written index to a running server. See
-[deployment.md](deployment.md) for the crontab line, the systemd timer, and the
-Docker one-shot refresh service.
+[deployment.md](deployment.md) for the crontab line and the systemd timer.
 
 `get_diagnostics` and `make data-status` both report the loaded MGI release, so a
 consumer can tell which snapshot a number came from — counts reflect the current

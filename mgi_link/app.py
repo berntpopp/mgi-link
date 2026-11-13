@@ -72,14 +72,30 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
-        """Liveness probe (reports build provenance for deploy checks)."""
-        return {
+        """Liveness, build provenance, and the verified served data release identity."""
+        from mgi_link.exceptions import DataUnavailableError
+        from mgi_link.immutable_data import expected_identity, verify_runtime_identity
+
+        payload: dict[str, Any] = {
             "status": "ok",
             "version": __version__,
             "transport": "streamable-http-stateless",
             "service": "mgi-link",
             **build_info(),
         }
+        try:
+            actual = verify_runtime_identity(settings.data.db_path, settings.immutable_data)
+        except DataUnavailableError, OSError:
+            # A local dev build (not a restored release) reports no release identity.
+            return payload
+        payload["release_identity"] = {
+            "schema_version": 1,
+            "data_identity": {
+                "expected": expected_identity(settings.immutable_data),
+                "actual": actual,
+            },
+        }
+        return payload
 
     @app.get("/")
     async def root() -> dict[str, Any]:

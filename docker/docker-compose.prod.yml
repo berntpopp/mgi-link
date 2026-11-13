@@ -4,6 +4,15 @@
 #   docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml up -d
 
 services:
+  mgi-data-init:
+    build: !reset null
+    image: ${MGI_LINK_IMAGE:?Set MGI_LINK_IMAGE to ghcr.io/berntpopp/mgi-link@sha256:<digest>}
+    pull_policy: missing
+    volumes: !override
+      - mgi-data:/data
+    networks: !override
+      - default
+
   mgi-link:
     build: !reset null
     image: ${MGI_LINK_IMAGE:?Set MGI_LINK_IMAGE to ghcr.io/berntpopp/mgi-link@sha256:<digest>}
@@ -23,10 +32,11 @@ services:
       MGI_LINK_LOG_FORMAT: json
       MGI_LINK_ALLOWED_HOSTS: '["localhost","127.0.0.1","::1","mgi-link.genefoundry.org"]'
       MGI_LINK_DATA__DATA_DIR: /data
-      MGI_LINK_DATA__AUTO_BOOTSTRAP: "true"
+      MGI_LINK_DATA__DB_FILENAME: current/mgi.sqlite
+      MGI_LINK_DATA__AUTO_BOOTSTRAP: "false"
       MGI_LINK_DATA__REFRESH_ENABLED: "false"
     volumes: !override
-      - mgi-data:/data
+      - mgi-data:/data:ro
     read_only: true
     tmpfs: !override
       - /tmp:rw,noexec,nosuid,size=256m,mode=1777
@@ -57,7 +67,6 @@ services:
     networks: !override
       - default
 
-  refresh: !reset null
 
 volumes: !override
   mgi-data:

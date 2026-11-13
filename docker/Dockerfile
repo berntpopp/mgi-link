@@ -63,9 +63,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     MGI_LINK_TRANSPORT=unified \
     MGI_LINK_MCP_PATH=/mcp \
     MGI_LINK_DATA__DATA_DIR=/data \
-    # The entrypoint builds the index before the server starts. Refresh is owned
-    # by cron (see docs/deployment.md), so the in-app scheduler stays OFF.
-    MGI_LINK_DATA__AUTO_BOOTSTRAP=true \
+    # The mgi-data-init sidecar restores the pinned, digest-verified data
+    # release into /data/<digest>/ and selects it via /data/current; the server
+    # only reads it (see docs/deployment.md). No upstream download at boot.
+    MGI_LINK_DATA__DB_FILENAME=current/mgi.sqlite \
+    MGI_LINK_DATA__AUTO_BOOTSTRAP=false \
     MGI_LINK_DATA__REFRESH_ENABLED=false \
     TMPDIR=/tmp
 
@@ -88,9 +90,8 @@ WORKDIR /home/app/web
 
 COPY --chown=app:app ./mgi_link ./mgi_link
 COPY --chown=app:app ./server.py ./mcp_server.py ./pyproject.toml ./README.md ./
-COPY --chown=app:app ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 
-RUN /opt/venv/bin/pip install . --no-deps && chmod +x /usr/local/bin/entrypoint.sh
+RUN /opt/venv/bin/pip install . --no-deps
 
 RUN rm -rf /root/.cache/pip \
            /usr/local/lib/python*/ensurepip \
@@ -142,9 +143,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     MGI_LINK_TRANSPORT=unified \
     MGI_LINK_MCP_PATH=/mcp \
     MGI_LINK_DATA__DATA_DIR=/data \
-    # The entrypoint builds the index before the server starts. Refresh is owned
-    # by cron (see docs/deployment.md), so the in-app scheduler stays OFF.
-    MGI_LINK_DATA__AUTO_BOOTSTRAP=true \
+    # The mgi-data-init sidecar restores the pinned, digest-verified data
+    # release into /data/<digest>/ and selects it via /data/current; the server
+    # only reads it (see docs/deployment.md). No upstream download at boot.
+    MGI_LINK_DATA__DB_FILENAME=current/mgi.sqlite \
+    MGI_LINK_DATA__AUTO_BOOTSTRAP=false \
     MGI_LINK_DATA__REFRESH_ENABLED=false \
     TMPDIR=/tmp
 WORKDIR /home/app/web
@@ -153,12 +156,13 @@ USER app
 
 EXPOSE 8000
 
-# The built SQLite index lives under MGI_LINK_DATA__DATA_DIR (/data).
-# Mount a volume there so the ~73MB index persists across container restarts.
+# The restored data release lives under MGI_LINK_DATA__DATA_DIR (/data),
+# written by `mgi-link-data materialize-data` (init sidecar) and mounted
+# read-only into the server.
 VOLUME ["/data"]
 
-# start-period covers the entrypoint's first build (download ~33MB + ~4s build).
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=120s \
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=60s \
     CMD curl -f http://127.0.0.1:8000/health || exit 1
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# server.py reads MGI_LINK_TRANSPORT / MGI_LINK_HOST / MGI_LINK_PORT.
+CMD ["python", "server.py"]
