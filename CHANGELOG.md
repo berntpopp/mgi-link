@@ -4,6 +4,12 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.6.14] - 2026-11-13
+
+### Changed
+
+- CI: re-pin the reusable container CI/release workflows to genefoundry-router v0.10.14 (`bda1aca`), which fixes the release re-run/recovery path (genefoundry-router #277).
+
 ## [0.6.13] - 2026-11-11
 
 ### Security
