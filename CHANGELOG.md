@@ -4,6 +4,12 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-11-13
+
+### Fixed
+
+- **Agent-facing data-source text no longer says "refreshed by cron".** Since 0.7.0 the container serves a pinned, owner-reviewed `data-mgi-*` release (reported in `/health` and `get_diagnostics`); the capabilities `data_source`, the server instructions and the reference notes now say so. Cron remains documented only for source checkouts. Guarded by `tests/unit/test_data_source_wording.py`.
+
 ## [0.7.1] - 2026-11-13
 
 ### Fixed

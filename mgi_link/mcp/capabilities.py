@@ -95,7 +95,8 @@ def build_capabilities() -> dict[str, Any]:
         "data_source": (
             "Local SQLite index built from the MGI bulk data reports "
             "(MRK_List2, MGI_PhenotypicAllele, MGI_GenePheno, VOC_MammalianPhenotype, "
-            "MPheno_OBO, HOM_MouseHumanSequence, MGI_DO), refreshed by cron."
+            "MPheno_OBO, HOM_MouseHumanSequence, MGI_DO), served from the pinned, "
+            "owner-reviewed data-mgi-* release reported in /health and get_diagnostics."
         ),
         "research_use_only": True,
         "research_use_notice": RESEARCH_USE_NOTICE,
