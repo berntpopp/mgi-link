@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import gzip
 import hashlib
+import os
 from pathlib import Path
 
 import httpx
@@ -160,3 +161,28 @@ def test_health_reports_runtime_v1_identity_only_for_the_restored_release(
     local = MgiDataConfig(data_dir=tmp_path / "build", db_filename="mgi.sqlite")
     monkeypatch.setattr(config_mod.settings, "data", local)
     assert "release_identity" not in TestClient(app_mod.create_app()).get("/health").json()
+
+
+@respx.mock
+def test_runtime_identity_hashes_once_until_the_served_file_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import mgi_link.immutable_data as immutable_data
+
+    requirement, bundle = _release(tmp_path)
+    _serve(bundle)
+    selected = materialize_immutable_data(requirement)
+    hashed: list[Path] = []
+    real_sha256 = immutable_data._sha256
+    monkeypatch.setattr(
+        immutable_data, "_sha256", lambda path: hashed.append(path) or real_sha256(path)
+    )
+
+    verify_runtime_identity(selected, requirement)
+    verify_runtime_identity(selected, requirement)
+    assert len(hashed) == 1  # a repeated /health probe does not re-read the database
+
+    stat = selected.stat()
+    os.utime(selected, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1))
+    verify_runtime_identity(selected, requirement)
+    assert len(hashed) == 2  # a changed stat (mtime/size/inode) invalidates the cache

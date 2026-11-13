@@ -66,11 +66,20 @@ and recombinase activity are out of scope in v1.
 
 ## Licence and citation
 
-MGI data are freely available for research use; please cite MGI / The Jackson
-Laboratory (see the
-[MGI copyright statement](https://www.informatics.jax.org/mgihome/other/copyright.shtml)).
-The **Mammalian Phenotype Ontology is licensed CC BY 4.0** — a distinct grant
-from MGI's general research-use terms.
+MGI's [copyright statement](https://www.informatics.jax.org/mgihome/other/copyright.shtml):
+
+> MGI data and annotations are licensed under a Creative Commons Attribution 4.0
+> International License (CC-BY). Images accessible from the website are the
+> copyrighted work of the attributed author or publisher unless otherwise noted.
+
+The **Mammalian Phenotype Ontology is also CC BY 4.0**. mgi-link serves no images.
+Attribute as MGI's [citation page](https://www.informatics.jax.org/mgihome/other/citation.shtml)
+asks: "Mouse Genome Database (MGD) at the Mouse Genome Informatics website, The
+Jackson Laboratory, Bar Harbor, Maine. World Wide Web (URL:
+https://www.informatics.jax.org)." plus the month and year of retrieval. The verified
+terms and the full attribution + change notice are recorded in
+`release/data-authorization.json`; the served string is `MGI_LICENSE`
+(`mgi_link/constants.py`).
 
 The recommended citation is served verbatim at the `mgi://citation` resource and
 in `get_server_capabilities` (`mgi_link/constants.py`):
