@@ -93,9 +93,13 @@ restore the release pinned in the image, never contact MGI, and report the serve
 release in `/health`. A source checkout refreshes with `mgi-link-data refresh`
 (conditional, cron). Full model: [data.md](docs/data.md).
 
-**Data licence.** MGI data and annotations are licensed **CC BY 4.0**; cite MGI
-/ The Jackson Laboratory ([copyright](https://www.informatics.jax.org/mgihome/other/copyright.shtml)).
-The **Mammalian Phenotype Ontology is licensed CC BY 4.0**.
+**Data licence.** MGI data and annotations are licensed **CC BY 4.0**
+([terms](https://www.informatics.jax.org/mgihome/other/copyright.shtml)); the
+**Mammalian Phenotype Ontology is also CC BY 4.0**. Attribute as MGI asks:
+"Mouse Genome Database (MGD) at the Mouse Genome Informatics website, The Jackson
+Laboratory, Bar Harbor, Maine. World Wide Web (URL: https://www.informatics.jax.org)."
+plus the month and year of retrieval. Images on the MGI website are excluded (their
+authors' or publishers' copyright) and are not served.
 
 **Cite** (served verbatim at `mgi://citation`): Baldarelli RM, Smith CL, Bello SM,
 et al. Mouse Genome Informatics: an integrated knowledgebase system for the
@@ -119,6 +123,6 @@ README standard, mypy strict, and tests. It must be green before a change lands.
 
 ## License
 
-Code: [MIT](LICENSE) © mgi-link contributors. Data: MGI data are free for
-research use (cite MGI / The Jackson Laboratory); the Mammalian Phenotype
-Ontology is CC BY 4.0.
+Code: [MIT](LICENSE) © mgi-link contributors. Data: MGI data and the Mammalian
+Phenotype Ontology are CC BY 4.0 (attribute MGI / The Jackson Laboratory; images
+excluded) — see [Data & provenance](#data--provenance).

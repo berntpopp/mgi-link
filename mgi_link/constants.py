@@ -209,10 +209,16 @@ RECOMMENDED_CITATION = (
     "https://www.informatics.jax.org/."
 )
 
-#: MGI data usage. MGI data are freely available for research; the Mammalian
-#: Phenotype Ontology is distributed CC BY 4.0.
+#: MGI data licence, as verified in release/data-authorization.json (single source
+#: for every served surface: capabilities ``license`` and the reference notes).
 MGI_LICENSE = (
-    "MGI data are freely available for research use; please cite MGI / The "
-    "Jackson Laboratory (see https://www.informatics.jax.org/mgihome/other/"
-    "copyright.shtml). The Mammalian Phenotype Ontology is licensed CC BY 4.0."
+    "MGI data and annotations are licensed CC BY 4.0 "
+    "(https://creativecommons.org/licenses/by/4.0/; terms: "
+    "https://www.informatics.jax.org/mgihome/other/copyright.shtml); the Mammalian "
+    'Phenotype Ontology is also CC BY 4.0. Attribute as MGI asks: "Mouse Genome '
+    "Database (MGD) at the Mouse Genome Informatics website, The Jackson Laboratory, "
+    'Bar Harbor, Maine. World Wide Web (URL: https://www.informatics.jax.org)." plus '
+    "the month and year the data were retrieved. Images on the MGI website are "
+    "excluded: they remain the copyright of their authors or publishers and are not "
+    "served here."
 )
