@@ -4,6 +4,17 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-13
+
+### Fixed
+
+- **Licence text matches the verified MGI terms.** The served `license` (capabilities and
+  reference notes), README and `docs/data.md` said MGI data were "freely available for
+  research use"; they now state CC BY 4.0 (as `release/data-authorization.json` records),
+  quote MGI's attribution template, and note that MGI website images are excluded. A new
+  contract test pins every surface to the authorization record.
+- Regression test that the cached runtime-v1 `/health` identity re-hashes only when the
+  served file's stat changes.
 
 ## [0.7.0] - 2026-11-13
 
