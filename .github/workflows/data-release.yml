@@ -60,7 +60,7 @@ jobs:
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP/release"
-          test "$(ls -A | LC_ALL=C sort | paste -sd,)" = "SHA256SUMS,data-authorization.json,mgi.sqlite.gz,manifest.json"
+          test "$(ls -A | LC_ALL=C sort | paste -sd,)" = "SHA256SUMS,data-authorization.json,manifest.json,mgi.sqlite.gz"
           sha256sum --check SHA256SUMS
           cmp manifest.json "$RUNNER_TEMP/manifest.json"
           tag="$(jq -er '.release_tag | select(test("^data-mgi-[0-9a-f]{16}$"))' manifest.json)"
