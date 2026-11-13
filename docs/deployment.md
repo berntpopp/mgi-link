@@ -1,8 +1,10 @@
 # Deployment
 
-`mgi-link` serves a local SQLite index built from the MGI bulk reports. The index
-is refreshed by an **external cron job** (the in-process scheduler is OFF by
-default — `MGI_LINK_DATA__REFRESH_ENABLED=false`).
+`mgi-link` serves a local SQLite index built from the MGI bulk reports.
+**Containers** (the fleet deploy) serve one pinned, digest-verified **data
+release** restored at startup and never download from MGI (see "Docker" below).
+The `build`/`refresh` CLI and cron options are for a **source checkout** only
+(the in-process scheduler is OFF by default — `MGI_LINK_DATA__REFRESH_ENABLED=false`).
 
 ## Build / refresh the index
 
@@ -31,12 +33,6 @@ The index is **required**: the server has no data until `build` has run once.
 `ExecStart=uv run mgi-link-data refresh`) plus a `mgi-link-refresh.timer`
 (`OnCalendar=Mon *-*-* 03:17:00`, `RandomizedDelaySec=1800`).
 
-**Docker** (one-shot refresh service under the `tools` profile):
-
-```bash
-docker compose -f docker/docker-compose.yml run --rm refresh
-```
-
 ## Running the server
 
 - **Unified** (FastAPI `/health` + MCP `/mcp` in one uvicorn process):
@@ -53,21 +49,66 @@ claude mcp add --transport http mgi-link http://127.0.0.1:8000/mcp   # local
 claude mcp add mgi-link -- uv run mgi-link-mcp                       # local, stdio
 ```
 
-## Docker
+## Docker (pinned data release)
 
 ```bash
 make docker-build
-make docker-up      # starts the unified server; entrypoint builds/refreshes the index first
+make docker-up      # mgi-data-init restores the pinned data release, then the server starts
 make docker-logs
 make docker-url     # prints the MCP URL + a `claude mcp add` line
 ```
 
-The Dockerfile is multi-stage (`python:3.14-slim`, `uv sync --frozen --no-dev`),
-runs as a non-root user, persists `/app/data` (the ~370 MB index) in the
-`mgi-data` named volume, and has a `/health` healthcheck with a long
-`start-period` to cover the first build. `entrypoint.sh` runs
-`mgi-link-data refresh` before serving so the request path never triggers a lazy
-build.
+- A one-shot **`mgi-data-init`** service runs `mgi-link-data materialize-data`
+  before the server starts. It downloads the image's pinned `data-mgi-*` GitHub
+  release asset of this repository (`github.com` /
+  `release-assets.githubusercontent.com` only), verifies the compressed and
+  expanded SHA-256 and the schema, writes `/data/<digest>/mgi.sqlite`, and
+  atomically points `/data/current` at it. A restart re-verifies the existing
+  snapshot without downloading.
+- The **server mounts the volume read-only** and serves `/data/current/mgi.sqlite`;
+  `/health` reports `release_identity.data_identity` (`expected` from the pin,
+  `actual` re-proved from the served bytes; the ~390 MB hash is re-run only when
+  the file changes). No in-app refresh, no upstream download.
+
+### Data releases and re-pinning
+
+`.github/workflows/data-release.yml` (weekly, or a manual dispatch on `main`)
+downloads each report **once** and runs `mgi-link-data build --reproducible`
+(`build_utc` pinned to the newest report `Last-Modified`, no build duration,
+rollback journal, deterministic row order) and `mgi-link-data package`
+(`mgi.sqlite.gz`, `manifest.json` with per-report validators + SHA-256,
+`data-authorization.json`, `SHA256SUMS`) under the content-addressed tag
+`data-mgi-<first 16 hex of the SQLite SHA-256>`; unchanged reports are a no-op.
+A new tag waits on the `data-release` environment (owner review, `main` only),
+is attested, digest-verified and published (never as the repository's "Latest").
+Re-pin in one reviewed PR: `DATA_RELEASE_TAG`, `DATA_COMPRESSED_SHA256` and
+`DATA_EXPANDED_SHA256` in `mgi_link/config.py` plus the same tag + `sha256:`
+digest in `container-release.json` (`tests/unit/test_data_release_identity.py`
+fails if they disagree), then release the app.
+
+Licence: MGI data and the MP ontology are CC BY 4.0
+([terms](https://www.informatics.jax.org/mgihome/other/copyright.shtml)); the
+snapshot holds no images. `release/data-authorization.json` records the repository
+owner's 2026-11-13 redistribution decision (the owner's determination, not an MGI
+approval) and the attribution + change notice every release carries.
+
+### Operator steps (fleet host)
+
+1. Pull the released image by digest and set `MGI_LINK_IMAGE` as before.
+2. `docker compose -f docker/docker-compose.npm.yml --env-file .env.docker up -d`.
+   Compose starts `mgi-data-init` first (outbound HTTPS to `github.com` and
+   `release-assets.githubusercontent.com`; ~0.5 GB free in the volume), waits for
+   exit `0`, then starts the server. No manual staging is required.
+3. Verify: `docker compose -f docker/docker-compose.npm.yml logs mgi-data-init`
+   shows `Materialized MGI data release data-mgi-…`, and `/health`
+   `release_identity` shows `expected == actual` with the tag/digest from
+   `container-release.json`.
+4. Optional cleanup: the old files in the existing `mgi-data` volume
+   (`mgi.sqlite`, the `.rpt`/`.ontology` reports, `download_cache.json`,
+   `.build.lock`) are no longer read and may be deleted (~600 MB); the restore
+   writes only `<digest>/` and `current`.
+5. Remove any host cron line that ran `docker compose ... run --rm refresh`; that
+   service no longer exists.
 
 ## Fleet deploy contract (strato_v6_docker_npm)
 

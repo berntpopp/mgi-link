@@ -87,14 +87,15 @@ The index is built from the MGI bulk reports at
 live MouseMine (InterMine) enrichment client exists but is off by default and
 reserved for v2.
 
-MGI publishes roughly weekly. `mgi-link-data refresh` is conditional (ETag /
-Last-Modified, so an unchanged release costs one `304`) and is driven by an
-**external cron job** — the in-process scheduler is off by default. Full model:
-[data.md](docs/data.md).
+MGI publishes roughly weekly. A weekly workflow builds the reports reproducibly into
+a content-addressed `data-mgi-<sha16>` GitHub release (owner-reviewed); containers
+restore the release pinned in the image, never contact MGI, and report the served
+release in `/health`. A source checkout refreshes with `mgi-link-data refresh`
+(conditional, cron). Full model: [data.md](docs/data.md).
 
-**Data licence.** MGI data are freely available for research use; please cite MGI
+**Data licence.** MGI data and annotations are licensed **CC BY 4.0**; cite MGI
 / The Jackson Laboratory ([copyright](https://www.informatics.jax.org/mgihome/other/copyright.shtml)).
-The **Mammalian Phenotype Ontology is licensed CC BY 4.0**, a separate grant.
+The **Mammalian Phenotype Ontology is licensed CC BY 4.0**.
 
 **Cite** (served verbatim at `mgi://citation`): Baldarelli RM, Smith CL, Bello SM,
 et al. Mouse Genome Informatics: an integrated knowledgebase system for the

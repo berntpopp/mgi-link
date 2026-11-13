@@ -65,9 +65,9 @@ There are **three** browser-facing knobs, and they are not the same thing:
 | Variable | Default | Notes |
 |----------|---------|-------|
 | `MGI_LINK_DATA__DATA_DIR` | `./data` | Where `mgi.sqlite` and the downloaded reports live. |
-| `MGI_LINK_DATA__DB_FILENAME` | `mgi.sqlite` | SQLite filename inside `DATA_DIR`. |
+| `MGI_LINK_DATA__DB_FILENAME` | `mgi.sqlite` (image: `current/mgi.sqlite`) | SQLite filename inside `DATA_DIR`. |
 | `MGI_LINK_DATA__REPORTS_BASE_URL` | `https://www.informatics.jax.org/downloads/reports` | Upstream bulk reports. |
-| `MGI_LINK_DATA__AUTO_BOOTSTRAP` | `true` | Build the index on first start if absent. |
+| `MGI_LINK_DATA__AUTO_BOOTSTRAP` | `true` (image: `false`) | Build the index on first start if absent (source checkout only). |
 | `MGI_LINK_DATA__REFRESH_ENABLED` | `false` | In-process scheduler; **cron owns refresh by default**. |
 | `MGI_LINK_DATA__REFRESH_INTERVAL_HOURS` | `168` | Only when the scheduler is enabled; MGI updates ~weekly. Range 1–720. |
 | `MGI_LINK_DATA__REFRESH_JITTER_SECONDS` | `600` | Random jitter per refresh (anti-thundering-herd). Range 0–86400. |
@@ -78,6 +78,23 @@ There are **three** browser-facing knobs, and they are not the same thing:
 | `MGI_LINK_DATA__USER_AGENT` | `mgi-link/<version> (+https://github.com/berntpopp/mgi-link)` | Sent to `informatics.jax.org`. |
 | `MGI_LINK_DATA__CACHE_SIZE` | `1024` | In-process query-cache entries; `0` disables. Range 0–65536. |
 | `MGI_LINK_DATA__CACHE_TTL` | `3600` | Query-cache TTL (s). Range 0–86400. |
+
+## Pinned data release (init sidecar)
+
+`mgi-link-data materialize-data` (the `mgi-data-init` service) restores exactly this
+release; `/health` reports it as `release_identity.data_identity`. Defaults are the
+reviewed pin in `mgi_link/config.py` (kept equal to `container-release.json`); override
+only for a reviewed re-pin ([Deployment](deployment.md#data-releases-and-re-pinning)).
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `MGI_LINK_IMMUTABLE_DATA__REFERENCE_ROOT` | `/data` | Volume root holding `<digest>/mgi.sqlite` and the `current` link. |
+| `MGI_LINK_IMMUTABLE_DATA__RELEASE_TAG` | pinned `data-mgi-<sha16>` | Published data release tag of this repo. |
+| `MGI_LINK_IMMUTABLE_DATA__BUNDLE_URL` | that release's `mgi.sqlite.gz` | HTTPS `github.com` release-asset URL under the tag. |
+| `MGI_LINK_IMMUTABLE_DATA__COMPRESSED_SHA256` | pinned | SHA-256 of `mgi.sqlite.gz` (the release digest). |
+| `MGI_LINK_IMMUTABLE_DATA__EXPANDED_SHA256` | pinned | SHA-256 of the expanded `mgi.sqlite`. |
+| `MGI_LINK_IMMUTABLE_DATA__MAX_COMPRESSED_BYTES` | `536870912` | Download size cap. |
+| `MGI_LINK_IMMUTABLE_DATA__MAX_EXPANDED_BYTES` | `2147483648` | Decompressed size cap. |
 
 See [data.md](data.md) for the source reports and the refresh model.
 

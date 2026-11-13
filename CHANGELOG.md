@@ -4,6 +4,30 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+
+## [0.7.0] - 2026-11-13
+
+### Changed
+
+- **Data mode `upstream-live` -> `external-reference`** (genefoundry-router#63 option A). The
+  container no longer downloads the MGI reports at boot. A one-shot `mgi-data-init` service
+  runs the new `mgi-link-data materialize-data`: it restores the pinned data release
+  `data-mgi-5f11fe44b4ba9e20` (MGI reports of 2026-11-09, 656,899 markers) from this
+  repository's GitHub releases, verifies the `mgi.sqlite.gz` and expanded SQLite SHA-256 and the
+  schema, and atomically selects `/data/current`. The server mounts the volume read-only
+  (`MGI_LINK_DATA__DB_FILENAME=current/mgi.sqlite`).
+- `/health` adds `release_identity.data_identity` (`expected` from the pin, `actual` re-proved
+  from the served bytes, re-hashed only when the file changes); `container-release.json` adopts
+  `data_identity_contract: runtime-v1` with the `immutable-bundle` smoke profile.
+- Data releases are no longer marked as the repository's "Latest" release.
+- The SQLite snapshot uses a rollback journal instead of WAL so it can be served from a
+  read-only mount.
+
+### Removed
+
+- `docker/entrypoint.sh` (boot-time `mgi-link-data refresh`) and the `refresh` compose service.
+  `mgi-link-data build` / `refresh` remain for a source checkout.
+
 ### Added
 
 - Data-release pipeline (genefoundry-router#63 option A): `mgi-link-data build --reproducible`
@@ -19,11 +43,6 @@ All notable changes to mgi-link are documented here.
 
 - `mp_closure` rows were written in per-process string-hash order, so two builds of the same
   reports differed; they are now sorted.
-
-### Changed
-
-- The SQLite snapshot uses a rollback journal instead of WAL so it can be served from a
-  read-only mount.
 
 ## [0.6.14] - 2026-11-13
 

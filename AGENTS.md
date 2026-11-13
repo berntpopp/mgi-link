@@ -71,7 +71,13 @@ architecture. Read this before changing code.
 - The build is **atomic** (`ingest/builder.build_database`: temp file +
   `os.replace`) under an `fcntl` `build_lock`, with `meta` provenance.
 - `ingest/downloader` does conditional GET (ETag/Last-Modified) so a cron
-  refresh is a cheap 304 when unchanged.
+  refresh is a cheap 304 when unchanged (source checkout only).
+- Containers are `external-reference` (genefoundry-router#63 option A): the image
+  restores the pinned `data-mgi-*` release (`mgi_link/config.py` `DATA_*` ==
+  `container-release.json` `data`). Builds must stay byte-reproducible (no
+  wall clock, no set/hash-order output). Re-pin only in a reviewed PR after the
+  owner-gated `data-release` workflow published it; never add `main` to the
+  `release` environment. See `docs/deployment.md`.
 - The MP ontology closure (`mp_closure`) and the top-level systems
   (`mp_top_system`, direct children of `MP:0000001`) are derived from
   `MPheno_OBO.ontology` at build time — never hardcode MP system ids.

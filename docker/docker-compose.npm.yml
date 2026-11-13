@@ -10,12 +10,51 @@
 name: mgi-link-npm
 
 services:
+  # Restores the pinned, digest-verified MGI data release (a `data-mgi-*`
+  # GitHub release of this repo) into the volume and exits; only the private
+  # stack network, no proxy network. No upstream download at boot.
+  mgi-data-init:
+    image: ${MGI_LINK_IMAGE:?Set MGI_LINK_IMAGE to ghcr.io/berntpopp/mgi-link@sha256:<digest>}
+    pull_policy: missing
+    command: ["mgi-link-data", "materialize-data"]
+    environment:
+      - MGI_LINK_IMMUTABLE_DATA__REFERENCE_ROOT=/data
+    volumes:
+      - mgi-data:/data
+    networks:
+      - mgi_link_internal_net
+    restart: "no"
+    # This image's own uid:gid (docker/Dockerfile); same as the server.
+    user: "999:999"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
+          pids: 256
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
   mgi_link:
     # Deploy pulls the released, attested image; it never builds from source.
     # Pin a digest, not a tag: there is no `latest`, and only a digest is immutable.
     image: ${MGI_LINK_IMAGE:?Set MGI_LINK_IMAGE to ghcr.io/berntpopp/mgi-link@sha256:<digest>}
     pull_policy: missing
     container_name: mgi-link-npm
+    depends_on:
+      mgi-data-init:
+        condition: service_completed_successfully
     # NO published host ports - NPM handles all routing via the container name.
     expose:
       - "8000"
@@ -27,22 +66,19 @@ services:
       - 'MGI_LINK_ALLOWED_HOSTS=["localhost","127.0.0.1","::1","mgi-link.genefoundry.org"]'
       - MGI_LINK_LOG_LEVEL=${LOG_LEVEL_API:-INFO}
       - MGI_LINK_LOG_FORMAT=json
+      # Serve the release restored by mgi-data-init, read-only.
       - MGI_LINK_DATA__DATA_DIR=/data
-      - MGI_LINK_DATA__AUTO_BOOTSTRAP=true
-      # No cron sidecar in the NPM deploy, so let the in-app scheduler keep the
-      # index fresh. MGI reports update ~weekly (168h); conditional refresh is a
-      # cheap no-op when unchanged.
-      - MGI_LINK_DATA__REFRESH_ENABLED=true
-      - MGI_LINK_DATA__REFRESH_INTERVAL_HOURS=168
-    # The image ENTRYPOINT builds the index then exec's the unified server,
-    # reading MGI_LINK_TRANSPORT/HOST/PORT above; no command override needed.
+      - MGI_LINK_DATA__DB_FILENAME=current/mgi.sqlite
+      - MGI_LINK_DATA__AUTO_BOOTSTRAP=false
+      - MGI_LINK_DATA__REFRESH_ENABLED=false
+    # The image CMD runs the unified server, reading MGI_LINK_TRANSPORT/HOST/PORT
+    # above; no command override needed.
     healthcheck:
       test: ["CMD", "curl", "-f", "-H", "Host: localhost", "http://127.0.0.1:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 5
-      # First boot downloads (~33MB) + builds the local MGI SQLite index.
-      start_period: 150s
+      start_period: 60s
     restart: unless-stopped
     # GeneFoundry deploy contract: the fleet controller (strato_v6_docker_npm,
     # scripts/utils/deployment_preflight.py) accepts a declared user only as numeric
@@ -51,11 +87,9 @@ services:
     user: "999:999"
     read_only: true
     tmpfs:
-      # TMPDIR=/tmp (set in the image) - download/build scratch space.
       - /tmp:rw,noexec,nosuid,size=256m,mode=1777
     volumes:
-      # Persist the built MGI SQLite index across container restarts.
-      - mgi-data:/data
+      - mgi-data:/data:ro
     networks:
       - mgi_link_internal_net
       - npm_proxy_network
