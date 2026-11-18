@@ -17,7 +17,7 @@ from typing import Any
 
 from fastmcp.exceptions import ValidationError as FastMCPValidationError
 from fastmcp.server.middleware.middleware import CallNext, Middleware, MiddlewareContext
-from fastmcp.tools.tool import ToolResult
+from fastmcp.tools import ToolResult
 from mcp.types import CallToolRequestParams, TextContent
 from pydantic import ValidationError as PydanticValidationError
 
