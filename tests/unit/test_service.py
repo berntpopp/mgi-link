@@ -230,3 +230,12 @@ def test_diagnostics(service: MgiService) -> None:
     assert diag["data_available"] is True
     assert diag["marker_count"] == 4
     assert diag["allele_count"] == 6
+
+
+def test_phenotypes_return_the_fields_the_description_names(service: MgiService) -> None:
+    """The pinned get_marker_phenotypes description names these fields; keep them real."""
+    out = service.get_phenotypes("Wt1")
+    assert {"summary", "scope_note", "total", "returned", "limit", "truncated"} <= set(out)
+    assert {"mp_id", "mp_term", "genotype_count"} <= set(out["annotations"][0])
+    full = service.get_phenotypes("Wt1", mode="full")
+    assert {"genetic_background", "pubmed_id"} <= set(full["annotations"][0])
