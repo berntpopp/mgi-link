@@ -19,6 +19,9 @@ _PRESERVE_KEYS: frozenset[str] = frozenset({"_meta", "success"})
 # Verbose marker fields dropped in compact mode.
 _MARKER_DROP_COMPACT: frozenset[str] = frozenset({"cm_position", "status"})
 
+# Search-row fields only standard/full carry (compact = the advertised summary keys).
+_SUMMARY_DROP_COMPACT: frozenset[str] = frozenset({"feature_type", "chromosome"})
+
 _MARKER_KEEP_MINIMAL: frozenset[str] = frozenset(
     {
         "mgi_id",
@@ -79,7 +82,11 @@ def shape_summary(summary: dict[str, Any], mode: str) -> dict[str, Any]:
         return {k: v for k, v in summary.items() if k in keep}
     if mode in ("standard", "full"):
         return summary
-    return {k: v for k, v in summary.items() if v is not None and v != ""}
+    return {
+        k: v
+        for k, v in summary.items()
+        if k not in _SUMMARY_DROP_COMPACT and v is not None and v != ""
+    }
 
 
 def shape_allele(allele: dict[str, Any], mode: str) -> dict[str, Any]:

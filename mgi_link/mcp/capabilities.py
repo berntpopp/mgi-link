@@ -162,7 +162,12 @@ def build_capabilities() -> dict[str, Any]:
                 "minimal = identity anchors; compact = drops null/verbose "
                 "(cm_position/status); standard/full = the complete record."
             ),
-            "search_markers/get_marker_alleles": (
+            "search_markers": (
+                "minimal trims to identity; compact = {mgi_id, symbol, name, "
+                "marker_type, score, match}; standard/full add feature_type and "
+                "chromosome."
+            ),
+            "get_marker_alleles": (
                 "minimal trims to identity; compact drops null/empty; standard/full "
                 "return the full rows."
             ),
