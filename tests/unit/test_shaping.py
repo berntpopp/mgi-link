@@ -59,3 +59,26 @@ def test_shape_summary_and_allele() -> None:
     }
     assert set(shaping.shape_allele(allele, "minimal")) == {"allele_id", "symbol", "allele_type"}
     assert "attributes" not in shaping.shape_allele(allele, "compact")
+
+
+def test_search_summary_compact_differs_from_full() -> None:
+    """A fully-populated row must still shrink in compact (behaviour probe)."""
+    row = {
+        "mgi_id": "MGI:1",
+        "symbol": "Pax6",
+        "name": "paired box 6",
+        "marker_type": "Gene",
+        "feature_type": "protein coding gene",
+        "chromosome": "2",
+        "score": 1.0,
+        "match": "fts",
+    }
+    assert shaping.shape_summary(row, "full") == row
+    assert set(shaping.shape_summary(row, "compact")) == {
+        "mgi_id",
+        "symbol",
+        "name",
+        "marker_type",
+        "score",
+        "match",
+    }

@@ -4,6 +4,12 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-11-19
+
+- search_markers honours response_mode: compact returns the advertised summary keys
+  {mgi_id, symbol, name, marker_type, score, match}; standard/full add feature_type and
+  chromosome (Behaviour Conformance v1 compact-vs-full probe).
+
 ## [0.8.2] - 2026-11-19
 
 - Shorten the pinned get_marker_phenotypes description (1,091 → 450 chars).
