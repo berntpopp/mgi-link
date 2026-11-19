@@ -26,20 +26,12 @@ def register_phenotype_tools(mcp: FastMCP) -> None:
         output_schema=None,
         tags={"phenotype"},
         description=(
-            "Return the Mammalian Phenotype (MP) annotations for a mouse marker. By "
-            "default (minimal/compact/standard) returns a DEDUPLICATED, support-ordered "
-            "list of DISTINCT MP terms — each {mp_id, mp_term, genotype_count} (standard "
-            "adds systems[]) — so the most replicated phenotypes come first and none are "
-            "buried alphabetically. response_mode=full returns the per-genotype rows "
-            "{mp_id, mp_term, allelic_composition, genetic_background, pubmed_id, "
-            "genotype_id, ...}. Every response carries a phenotype summary and a "
-            "truncation contract {total, returned, limit, truncated}; when truncated, "
-            "next_commands includes a widen step. mp_system optionally restricts to one "
-            "top-level system (name like 'renal/urinary system' or its MP id). SCOPE: "
-            "annotations are single-locus, NON-conditional genotypes (MGI_GenePheno); "
-            "conditional/Cre-driven and multi-genic genotypes are EXCLUDED (see the "
-            "response 'scope'/'scope_note'), so a zero or empty result does not mean the "
-            "gene lacks that phenotype in mouse — confirm on the MGI gene page. "
+            "Return the Mammalian Phenotype (MP) annotations for a mouse marker. Distinct "
+            "MP terms {mp_id, mp_term, genotype_count}, best-supported first; "
+            "response_mode=full: per-genotype rows with genetic_background, pubmed_id. "
+            "Paged: {total, returned, limit, truncated}. Single-locus non-conditional "
+            "genotypes only (scope_note): empty is not absence. Cite via "
+            "get_server_capabilities. "
             "Signature: get_marker_phenotypes(query, mp_system=, limit=, response_mode=)."
         ),
     )
