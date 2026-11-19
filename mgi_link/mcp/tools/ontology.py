@@ -53,7 +53,7 @@ def register_ontology_tools(mcp: FastMCP) -> None:
         tags={"ontology", "phenotype"},
         description=(
             "Free-text search over Mammalian Phenotype (MP) term names and "
-            "definitions (FTS, relevance-ranked). Returns {mp_id, name, definition, "
+            "definitions (FTS, relevance-ranked); returns {mp_id, name, definition, "
             "score} plus a truncation contract {total, returned, limit, truncated} "
             "(widen step in next_commands when truncated). Use this to resolve a "
             "phenotype description to an MP id, then find_markers_by_phenotype or "
