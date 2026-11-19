@@ -100,7 +100,7 @@ def register_marker_tools(mcp: FastMCP) -> None:
         tags={"marker"},
         description=(
             "Free-text search over mouse marker symbols, names, and synonyms (FTS, "
-            "relevance-ranked). Returns ranked {mgi_id, symbol, name, marker_type, "
+            "relevance-ranked); returns ranked {mgi_id, symbol, name, marker_type, "
             "score, match} summaries. Exact symbol/synonym hits are PINNED first "
             "(match: exact_symbol|exact_synonym|fts) so an exact gene is never buried "
             "under transgenes or lncRNAs. Returns a truncation contract {total, "

@@ -4,6 +4,10 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-19
+
+- Tool descriptions lead with what each tool returns (D1, Tool-Schema Documentation v1.1).
+
 ## [0.8.0] - 2026-11-18
 
 ### Changed
