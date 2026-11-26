@@ -4,6 +4,17 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-26
+
+- Gene identifier forms: every `query` parameter resolves a prefixed NCBI Gene id
+  (`NCBIGene:3845`), the mouse gene itself or the mouse ortholog of a human gene. A human
+  Ensembl gene id (`ENSG...`), which the MGI reports do not carry, is rejected with
+  `invalid_input` (`field`, `allowed_values`, and `hgnc_resolve_symbol` as the converter in
+  `_meta.next_commands`) instead of `not_found`.
+- List tools report `_meta.pagination` (`total_count`, `has_more`, `next_cursor`). These tools
+  page by `limit` only, so `next_cursor` is always `null`; the top-level `total`, `returned`,
+  `limit` and `truncated` are unchanged.
+
 ## [0.9.0] - 2026-11-26
 
 Adopts the Response-Envelope Standard v1.2 (#130).

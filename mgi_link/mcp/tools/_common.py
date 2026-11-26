@@ -15,7 +15,8 @@ QueryStr = Annotated[
     str,
     Field(
         description="A mouse marker symbol (current or synonym, case-insensitive), an MGI id "
-        "(MGI:98968 or 98968), or a human gene symbol / HGNC id for the ortholog.",
+        "(MGI:98968 or 98968), or a human gene symbol / HGNC id / NCBIGene:<id> for the ortholog. "
+        "A human Ensembl id (ENSG...) is rejected: convert it with hgnc_resolve_symbol first.",
         examples=["Wt1", "MGI:98968", "Pax6", "WT1", "HGNC:12796"],
     ),
 ]

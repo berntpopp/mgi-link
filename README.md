@@ -24,7 +24,7 @@ does knocking out this gene cause?".
 `mgi-link` rebuilds that surface from MGI's canonical bulk reports into a fast,
 offline, deterministic SQLite index and exposes it as MCP tools with structured
 outputs, `response_mode` verbosity control, and `_meta.next_commands` chaining.
-It also closes the mouse↔human gap: pass a **human** symbol or HGNC id to any
+It also closes the mouse↔human gap: pass a **human** symbol or HGNC or NCBI Gene id to any
 marker tool and it resolves through the ortholog.
 
 ## Quick start

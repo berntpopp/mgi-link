@@ -47,6 +47,13 @@ def frame_success(
     success = payload.pop("success", True)
     if success:
         meta.update(_provenance(started))
+        if "total" in payload and "truncated" in payload:
+            # These tools page by `limit` only: there is no cursor, a wider `limit` gets the rest.
+            meta["pagination"] = {
+                "total_count": payload["total"],
+                "has_more": payload["truncated"],
+                "next_cursor": None,
+            }
         if not {"result", "results"} & payload.keys():
             payload = {"result": payload}
     return {"success": success, **payload, "_meta": meta}
