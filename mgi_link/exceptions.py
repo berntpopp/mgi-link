@@ -62,6 +62,22 @@ class InvalidInputError(MgiError):
         self.allowed_trusted = allowed_trusted
 
 
+class UnsupportedIdentifierError(InvalidInputError):
+    """A well-formed gene identifier in a form the index cannot convert."""
+
+    # Whitespace-free tokens: the envelope drops any allowed value that has a space.
+    ACCEPTED_FORMS = ("symbol", "MGI:<id>", "HGNC:<id>", "NCBIGene:<id>", "ENSMUSG<id>")
+
+    def __init__(self, value: str, field: str = "query") -> None:
+        """Store the grammar-validated identifier so the envelope can name a converter."""
+        super().__init__(
+            f"'{value}' is a human Ensembl gene id; mgi-link does not convert that form.",
+            field,
+            allowed=list(self.ACCEPTED_FORMS),
+        )
+        self.value = value
+
+
 class NotFoundError(MgiError):
     """A lookup returned no rows for an otherwise valid identifier."""
 

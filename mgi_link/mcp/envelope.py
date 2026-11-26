@@ -27,6 +27,7 @@ from mgi_link.exceptions import (
     NotFoundError,
     RateLimitError,
     ServiceUnavailableError,
+    UnsupportedIdentifierError,
     WithdrawnEntryError,
 )
 from mgi_link.identifiers import looks_like_symbol
@@ -305,8 +306,7 @@ def _error_envelope(exc: BaseException, context: McpErrorContext) -> dict[str, A
     envelope: dict[str, Any] = {
         "success": False,
         "error_code": error_code,
-        # Defensive backstop: no forbidden code points reach the caller whatever
-        # the classify path (incl. McpToolError bodies authored in tools).
+        # Backstop: no forbidden code point reaches the caller on any classify path.
         "message": sanitize_message(message),
         "retryable": error_code in _RETRYABLE,
         "recovery_action": _recovery_action(error_code),
@@ -352,6 +352,8 @@ def _error_envelope(exc: BaseException, context: McpErrorContext) -> dict[str, A
         envelope["_meta"]["next_commands"] = [
             cmd("get_marker", query=c["mgi_id"]) for c in candidates[:3]
         ] or [cmd("get_server_capabilities")]
+    elif isinstance(exc, UnsupportedIdentifierError):
+        envelope["_meta"]["next_commands"] = [cmd("hgnc_resolve_symbol", query=exc.value)]
     elif context.fallback is not None:
         envelope["_meta"]["next_commands"] = [context.fallback]
     else:

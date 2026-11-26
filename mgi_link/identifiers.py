@@ -17,6 +17,9 @@ _SYMBOL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._<>()@/+-]{0,127}$")
 _ENSMUSG_RE = re.compile(r"^ENSMUSG\d{6,}", re.IGNORECASE)
 _ENSG_RE = re.compile(r"^ENSG\d{6,}", re.IGNORECASE)
 _HGNC_RE = re.compile(r"^HGNC:\d+$", re.IGNORECASE)
+# NCBI Gene ids are one namespace across species, so a prefixed id is unambiguous.
+_NCBI_GENE_RE = re.compile(r"^(?:NCBI_?Gene|Entrez(?:Gene)?|GeneID):(\d+)$", re.IGNORECASE)
+_HUMAN_ENSEMBL_RE = re.compile(r"^ENSG\d{11}(\.\d+)?$", re.IGNORECASE)
 
 
 def normalize_mgi_id(value: str) -> str | None:
@@ -72,3 +75,14 @@ def infer_xref_source(value: str) -> str | None:
     if _HGNC_RE.match(text):
         return "hgnc_id"
     return None
+
+
+def ncbi_gene_number(value: str) -> str | None:
+    """Return the number of a prefixed NCBI Gene id (``NCBIGene:3845``), or ``None``."""
+    match = _NCBI_GENE_RE.match((value or "").strip())
+    return match.group(1) if match else None
+
+
+def is_human_ensembl_gene(value: str) -> bool:
+    """True for a human Ensembl gene id (``ENSG...``), which the MGI reports do not carry."""
+    return bool(_HUMAN_ENSEMBL_RE.match((value or "").strip()))

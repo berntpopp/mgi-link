@@ -15,10 +15,12 @@ from mgi_link.exceptions import (
     DataUnavailableError,
     InvalidInputError,
     NotFoundError,
+    UnsupportedIdentifierError,
 )
 from mgi_link.identifiers import (
     infer_xref_source,
-    looks_like_mgi_id,
+    is_human_ensembl_gene,
+    ncbi_gene_number,
     normalize_mgi_id,
     normalize_mp_id,
 )
@@ -139,23 +141,19 @@ class MgiService:
             marker = provider.get_marker(ortholog_id)
             if marker is not None:
                 return marker, "ortholog"
-
+        if is_human_ensembl_gene(raw):
+            raise UnsupportedIdentifierError(raw)
         raise NotFoundError(
             f"No MGI marker matches '{raw}'. Try an MGI id, a mouse symbol, or a "
-            "human gene symbol/HGNC id for the ortholog."
+            "human gene symbol, HGNC id or NCBIGene:<id> for the ortholog."
         )
 
     def _resolve_via_xref(self, raw: str, provider: MarkerProvider) -> str | None:
-        """Try the xref index (human symbol, HGNC, Ensembl) for a marker id."""
-        candidates: list[str] = []
-        source = infer_xref_source(raw)
-        if source:
-            candidates.append(source)
-        # A bare word might be a human gene symbol.
-        if not looks_like_mgi_id(raw):
-            candidates.append("human_symbol")
-        for src in candidates:
-            ids = provider.lookup_by_xref(src, raw)
+        """Try the xref index (human symbol, HGNC, Ensembl, NCBI Gene) for a marker id."""
+        number = ncbi_gene_number(raw)  # a mouse gene itself, or a human gene's ortholog
+        own = (infer_xref_source(raw), "human_symbol")  # a bare word may be a human symbol
+        for src in filter(None, ("entrez_id", "human_entrez_id") if number else own):
+            ids = provider.lookup_by_xref(src, number or raw)
             if ids:
                 return ids[0]
         return None

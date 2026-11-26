@@ -180,3 +180,29 @@ async def test_identity_tools_data_unavailable_when_cold_no_fallback(
         payload = structured(await cold_facade.call_tool(tool, {"query": "Wt1"}))
         assert payload["success"] is False
         assert payload["error_code"] == "upstream_unavailable"
+
+
+@pytest.mark.parametrize("query", ["NCBIGene:7490", "NCBIGene:22431", "HGNC:12796"])
+async def test_gene_identifier_forms_resolve(facade: Any, structured: Any, query: str) -> None:
+    """Human and mouse NCBI Gene ids resolve like the HGNC id (identifier forms)."""
+    payload = structured(await facade.call_tool("resolve_marker", {"query": query}))
+    assert payload["result"]["mgi_id"] == "MGI:98968"
+
+
+async def test_human_ensembl_id_is_rejected_with_converter(facade: Any, structured: Any) -> None:
+    """A form the index cannot convert is invalid_input naming a converter, never not_found."""
+    payload = structured(await facade.call_tool("get_marker", {"query": "ENSG00000184937"}))
+    assert payload["error_code"] == "invalid_input"
+    assert payload["field"] == "query"
+    assert "HGNC:<id>" in payload["allowed_values"]
+    assert payload["_meta"]["next_commands"] == [
+        {"tool": "hgnc_resolve_symbol", "arguments": {"query": "ENSG00000184937"}}
+    ]
+
+
+async def test_list_tool_reports_pagination_meta(facade: Any, structured: Any) -> None:
+    payload = structured(await facade.call_tool("search_markers", {"query": "Wt1", "limit": 1}))
+    pagination = payload["_meta"]["pagination"]
+    assert pagination["total_count"] == payload["total"]
+    assert pagination["has_more"] is payload["truncated"]
+    assert pagination["next_cursor"] is None
