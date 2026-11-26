@@ -4,6 +4,12 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-11-26
+
+### Fixed
+
+- `_meta.next_commands` no longer carries the caller's unvalidated input (GTS-CORE-TXT-04): the `search_markers` no-hit step forwards the query to `resolve_marker` only when it is a valid MGI/MP/HGNC identifier or gene symbol (otherwise `get_server_capabilities`); the `search_markers` and `search_phenotype_terms` widen steps repeat the query only when it has at most 200 characters and no control or format characters (new `echo_safe` helper); the `resolve_marker` no-id step follows the same identifier rule.
+
 ## [0.10.0] - 2026-11-26
 
 - Gene identifier forms: every `query` parameter resolves a prefixed NCBI Gene id
