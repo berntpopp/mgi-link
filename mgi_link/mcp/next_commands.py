@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import Any
 
 from mgi_link.identifiers import (
@@ -40,6 +41,16 @@ def _safe_recovery_query(value: str) -> str | None:
     ):
         return text
     return None
+
+
+def echo_safe(query: str) -> str | None:
+    """Caller free text fit to repeat in a page/widen step of the same call (GTS-CORE-TXT-04).
+
+    Kept only if at most 200 characters with no control/format (Cc/Cf) code point.
+    """
+    if len(query) > 200 or any(unicodedata.category(ch) in ("Cc", "Cf") for ch in query):
+        return None
+    return query
 
 
 def widen_cmd(tool: str, base_args: dict[str, Any], total: int, ceiling: int) -> dict[str, Any]:
@@ -84,7 +95,10 @@ def after_resolve(resolution: dict[str, Any]) -> list[dict[str, Any]]:
     """
     mgi_id = resolution.get("mgi_id")
     if not mgi_id:
-        return [cmd("search_markers", query=str(resolution.get("query", "")))]
+        value = _safe_recovery_query(str(resolution.get("query", "")))
+        if value is None:
+            return [cmd("get_server_capabilities")]
+        return [cmd("search_markers", query=value)]
     if resolution.get("source") == "mousemine":
         return [cmd("get_marker", query=mgi_id), cmd("get_diagnostics")]
     return [
@@ -113,14 +127,18 @@ def after_search(query: str, payload: dict[str, Any]) -> list[dict[str, Any]]:
     """After search_markers: open the top hit; widen if truncated."""
     hits = payload.get("results", [])
     if not hits:
-        return [cmd("resolve_marker", query=query), cmd("get_server_capabilities")]
+        # Forward the query to another tool only once it passed identifier validation.
+        value = _safe_recovery_query(query)
+        if value is None:
+            return [cmd("get_server_capabilities")]
+        return [cmd("resolve_marker", query=value), cmd("get_server_capabilities")]
     steps: list[dict[str, Any]] = []
     top = hits[0].get("mgi_id")
     if top:
         steps.append(cmd("get_marker", query=top))
-    if payload.get("truncated"):
+    if payload.get("truncated") and (safe := echo_safe(query)) is not None:
         steps.append(
-            widen_cmd("search_markers", {"query": query}, int(payload.get("total", 0)), 200)
+            widen_cmd("search_markers", {"query": safe}, int(payload.get("total", 0)), 200)
         )
     return steps or [cmd("get_server_capabilities")]
 
@@ -202,9 +220,9 @@ def after_search_terms(query: str, payload: dict[str, Any]) -> list[dict[str, An
     top = hits[0].get("mp_id")
     if top:
         steps.append(cmd("get_mp_term", mp_id=top))
-    if payload.get("truncated"):
+    if payload.get("truncated") and (safe := echo_safe(query)) is not None:
         steps.append(
-            widen_cmd("search_phenotype_terms", {"query": query}, int(payload.get("total", 0)), 200)
+            widen_cmd("search_phenotype_terms", {"query": safe}, int(payload.get("total", 0)), 200)
         )
     return steps or [cmd("get_server_capabilities")]
 
