@@ -87,6 +87,9 @@ The index is built from the MGI bulk reports at
 live MouseMine (InterMine) enrichment client exists but is off by default and
 reserved for v2.
 
+Every successful result names its origin in `_meta`: `source` (`mgi`), `data_version`
+(the MGI release of the index) and `retrieved_at` (when the index was built).
+
 MGI publishes roughly weekly. A weekly workflow builds the reports reproducibly into
 a content-addressed `data-mgi-<sha16>` GitHub release (owner-reviewed); containers
 restore the release pinned in the image, never contact MGI, and report the served

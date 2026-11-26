@@ -14,6 +14,7 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import ValidationError as PydanticValidationError
@@ -29,6 +30,7 @@ from mgi_link.exceptions import (
     WithdrawnEntryError,
 )
 from mgi_link.identifiers import looks_like_symbol
+from mgi_link.mcp.frame import frame_success
 from mgi_link.mcp.next_commands import cmd, default_error_next_commands, withdrawn_recovery
 from mgi_link.mcp.untrusted_content import (
     UntrustedTextLimitError,
@@ -38,9 +40,9 @@ from mgi_link.mcp.untrusted_content import (
 
 logger = logging.getLogger(__name__)
 
-# Per-call _meta is kept lean: static provenance (citation, MGI release) lives
-# ONLY in get_server_capabilities. Per-call _meta carries dynamic fields (tool,
-# request_id, next_commands) PLUS the research-use disclaimer
+# Per-call _meta is kept lean: the citation lives ONLY in get_server_capabilities.
+# Per-call _meta carries dynamic fields (tool, request_id, next_commands), on a
+# success the v1.2 provenance (mcp/frame.py), PLUS the research-use disclaimer
 # (unsafe_for_clinical_use), which -- per the fleet-wide Response-Envelope
 # Standard v1 -- must be repeated on every call, success and error alike, at
 # every response_mode. _UNSAFE_FOR_CLINICAL_USE_META is merged in last on every
@@ -399,6 +401,7 @@ def build_arg_error_envelope(
                 "_meta": {
                     "tool": tool_name,
                     "request_id": _request_id(),
+                    "elapsed_ms": 0,
                     "next_commands": [cmd("get_server_capabilities")],
                     **_UNSAFE_FOR_CLINICAL_USE_META,
                 },
@@ -425,6 +428,7 @@ def build_arg_error_envelope(
             "_meta": {
                 "tool": tool_name,
                 "request_id": _request_id(),
+                "elapsed_ms": 0,
                 "next_commands": [cmd("get_server_capabilities")],
                 **_UNSAFE_FOR_CLINICAL_USE_META,
             },
@@ -456,6 +460,7 @@ def build_fixed_error_envelope(
         "recovery_action": recovery_action,
         "_meta": {
             "request_id": _request_id(),
+            "elapsed_ms": 0,
             "next_commands": [cmd("get_server_capabilities")],
             **_UNSAFE_FOR_CLINICAL_USE_META,
         },
@@ -471,21 +476,14 @@ async def run_mcp_tool(
 ) -> dict[str, Any]:
     """Execute a tool body, returning the result dict or a structured error dict."""
     ctx = context or McpErrorContext(tool_name=tool_name)
-    start = time.perf_counter()
+    start, started = time.perf_counter(), datetime.now(UTC)
     try:
         result = await call()
         if isinstance(result, dict):
-            result.setdefault("success", True)
-            existing_meta: dict[str, Any] = result.get("_meta") or {}
-            result["_meta"] = {
-                **existing_meta,
-                "tool": tool_name,
-                "request_id": _request_id(),
-                "elapsed_ms": int((time.perf_counter() - start) * 1000),
-                # Merged in last (after existing_meta) so it always wins and can
-                # never be stripped or overridden by a tool body's own _meta.
-                **_UNSAFE_FOR_CLINICAL_USE_META,
-            }
+            # This _meta always wins over a tool body's own (frame_success merges it last).
+            meta = {"tool": tool_name, "request_id": _request_id(), **_UNSAFE_FOR_CLINICAL_USE_META}
+            meta["elapsed_ms"] = int((time.perf_counter() - start) * 1000)
+            result = frame_success(result, meta, started)
         return result
     except Exception as exc:  # broad catch is the error-boundary contract
         envelope = _error_envelope(exc, ctx)

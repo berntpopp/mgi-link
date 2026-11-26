@@ -69,6 +69,9 @@ def _assert_no_synthesized_sibling(container: dict[str, Any]) -> None:
 class _HostileRepo:
     """A minimal repo stub returning a hostile MP-term definition."""
 
+    def get_meta(self) -> dict[str, Any]:
+        return {"release": "2026-06-12", "build_utc": "2026-06-12T13:00:00+00:00"}
+
     def get_mp_term(self, mp_id: str) -> dict[str, Any] | None:
         if mp_id != "MP:0001262":
             return None
@@ -215,10 +218,10 @@ async def test_get_mp_term_via_facade_emits_fenced_object_in_both_views(
     structured, mirror = _structured_and_mirror(result)
     for view in (structured, mirror):
         assert view["success"] is True
-        _assert_fenced_hostile(view["definition"])
-        _assert_no_synthesized_sibling(view)
+        _assert_fenced_hostile(view["result"]["definition"])
+        _assert_no_synthesized_sibling(view["result"])
     # the two views carry the identical typed object (no prose-duplication drift)
-    assert structured["definition"] == mirror["definition"]
+    assert structured["result"]["definition"] == mirror["result"]["definition"]
 
 
 async def test_search_phenotype_terms_via_facade_emits_fenced_object_in_both_views(

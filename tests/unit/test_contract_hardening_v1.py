@@ -46,16 +46,16 @@ async def test_phenotypes_carry_explicit_scope_flag(facade: Any, structured: Any
     """get_marker_phenotypes declares its single-locus scope in the RESPONSE."""
     env = structured(await facade.call_tool("get_marker_phenotypes", {"query": "Wt1"}))
     assert env["success"] is True
-    assert env["scope"] == _SCOPE
-    assert env["excludes_conditional_genotypes"] is True
-    assert "conditional" in env["scope_note"].lower()
+    assert env["result"]["scope"] == _SCOPE
+    assert env["result"]["excludes_conditional_genotypes"] is True
+    assert "conditional" in env["result"]["scope_note"].lower()
 
 
 async def test_overview_carries_explicit_scope_flag(facade: Any, structured: Any) -> None:
     """get_phenotype_overview declares the same scope (no false gene-page parity)."""
     env = structured(await facade.call_tool("get_phenotype_overview", {"query": "Wt1"}))
-    assert env["scope"] == _SCOPE
-    assert "conditional" in env["scope_note"].lower()
+    assert env["result"]["scope"] == _SCOPE
+    assert "conditional" in env["result"]["scope_note"].lower()
 
 
 def test_zero_result_phenotype_query_is_still_scoped(service: MgiService) -> None:

@@ -14,8 +14,8 @@ pytestmark = pytest.mark.mcp
 async def test_resolve_marker_success(facade: Any, structured: Any) -> None:
     payload = structured(await facade.call_tool("resolve_marker", {"query": "Wt1"}))
     assert payload["success"] is True
-    assert payload["mgi_id"] == "MGI:98968"
-    assert payload["match_type"] == "current"
+    assert payload["result"]["mgi_id"] == "MGI:98968"
+    assert payload["result"]["match_type"] == "current"
     assert payload["_meta"]["tool"] == "resolve_marker"
     assert payload["_meta"]["next_commands"][0]["tool"] == "get_marker"
 
@@ -29,13 +29,13 @@ async def test_get_marker_next_commands(facade: Any, structured: Any) -> None:
 
 async def test_alleles_category_counts(facade: Any, structured: Any) -> None:
     payload = structured(await facade.call_tool("get_marker_alleles", {"query": "Wt1"}))
-    assert payload["total_alleles"] == 5
-    assert payload["category_counts"]["Targeted"] == 2
+    assert payload["result"]["total_alleles"] == 5
+    assert payload["result"]["category_counts"]["Targeted"] == 2
 
 
 async def test_phenotype_overview_via_facade(facade: Any, structured: Any) -> None:
     payload = structured(await facade.call_tool("get_phenotype_overview", {"query": "Wt1"}))
-    systems = {s["system"] for s in payload["systems"]}
+    systems = {s["system"] for s in payload["result"]["systems"]}
     assert "renal/urinary system phenotype" in systems
 
 
@@ -44,7 +44,7 @@ async def test_find_markers_by_phenotype(facade: Any, structured: Any) -> None:
         await facade.call_tool("find_markers_by_phenotype", {"mp_id": "MP:0005367"})
     )
     assert payload["success"] is True
-    assert any(m["mgi_id"] == "MGI:98968" for m in payload["markers"])
+    assert any(m["mgi_id"] == "MGI:98968" for m in payload["result"]["markers"])
 
 
 async def test_response_mode_minimal_projection(facade: Any, structured: Any) -> None:
@@ -52,7 +52,7 @@ async def test_response_mode_minimal_projection(facade: Any, structured: Any) ->
         await facade.call_tool("resolve_marker", {"query": "Wt1", "response_mode": "minimal"})
     )
     # minimal keeps only identity anchors
-    assert set(payload) <= {"query", "mgi_id", "symbol", "match_type", "_meta", "success"}
+    assert set(payload["result"]) <= {"query", "mgi_id", "symbol", "match_type"}
 
 
 async def test_not_found_error_envelope(facade: Any, structured: Any) -> None:
@@ -74,7 +74,7 @@ async def test_argument_alias_rewrite(facade: Any, structured: Any) -> None:
     # 'symbol' is an alias for 'query'
     payload = structured(await facade.call_tool("get_marker", {"symbol": "Wt1"}))
     assert payload["success"] is True
-    assert payload["mgi_id"] == "MGI:98968"
+    assert payload["result"]["mgi_id"] == "MGI:98968"
 
 
 async def test_unknown_argument_did_you_mean(facade: Any, structured: Any) -> None:
@@ -86,15 +86,15 @@ async def test_unknown_argument_did_you_mean(facade: Any, structured: Any) -> No
 
 async def test_capabilities_documents_new_contracts(facade: Any, structured: Any) -> None:
     payload = structured(await facade.call_tool("get_server_capabilities", {"detail": "full"}))
-    assert "truncation_contract" in payload
-    assert "response_mode_semantics" in payload
-    assert "behavioral_defaults" in payload
-    assert "field_glossary" in payload
+    assert "truncation_contract" in payload["result"]
+    assert "response_mode_semantics" in payload["result"]
+    assert "behavioral_defaults" in payload["result"]
+    assert "field_glossary" in payload["result"]
 
 
 async def test_capabilities_lists_all_tools(facade: Any, structured: Any) -> None:
     payload = structured(await facade.call_tool("get_server_capabilities", {}))
-    assert payload["tool_count"] == len(TOOLS)
+    assert payload["result"]["tool_count"] == len(TOOLS)
     registered = {t.name for t in await facade.list_tools()}
     assert set(TOOLS) == registered
 
@@ -109,8 +109,8 @@ async def test_ambiguous_query_envelope(facade: Any, structured: Any) -> None:
 
 async def test_diagnostics_tool(facade: Any, structured: Any) -> None:
     payload = structured(await facade.call_tool("get_diagnostics", {}))
-    assert payload["data_available"] is True
-    assert payload["marker_count"] == 4
+    assert payload["result"]["data_available"] is True
+    assert payload["result"]["marker_count"] == 4
 
 
 async def test_elapsed_ms_present(facade: Any, structured: Any) -> None:
@@ -123,14 +123,14 @@ async def test_elapsed_ms_present(facade: Any, structured: Any) -> None:
 
 async def test_diagnostics_has_build(facade: Any, structured: Any) -> None:
     payload = structured(await facade.call_tool("get_diagnostics", {}))
-    assert "version" in payload["build"]
-    assert "git_sha" in payload["build"]
+    assert "version" in payload["result"]["build"]
+    assert "git_sha" in payload["result"]["build"]
 
 
 async def test_resolve_marker_live_source_in_meta(fallback_facade: Any, structured: Any) -> None:
     payload = structured(await fallback_facade.call_tool("resolve_marker", {"query": "Wt1"}))
     assert payload["_meta"]["source"] == "mousemine"
-    assert "source" not in payload
+    assert "source" not in payload["result"]
 
 
 async def test_get_marker_live_source_in_meta_not_body(
@@ -139,23 +139,23 @@ async def test_get_marker_live_source_in_meta_not_body(
     payload = structured(await fallback_facade.call_tool("get_marker", {"query": "Wt1"}))
     assert payload["_meta"]["source"] == "mousemine"
     assert payload["_meta"]["partial"] is True
-    assert "source" not in payload  # lifted out of the answer body
-    assert "partial" not in payload
+    assert "source" not in payload["result"]  # lifted out of the answer body
+    assert "partial" not in payload["result"]
     tools = [c["tool"] for c in payload["_meta"]["next_commands"]]
     assert "get_marker_alleles" not in tools
 
 
-async def test_resolve_index_has_no_source(facade: Any, structured: Any) -> None:
+async def test_resolve_index_source_is_mgi(facade: Any, structured: Any) -> None:
     payload = structured(await facade.call_tool("resolve_marker", {"query": "Wt1"}))
-    assert "source" not in payload["_meta"]
+    assert payload["_meta"]["source"] == "mgi"
 
 
 async def test_diagnostics_reports_live_fallback(facade: Any, structured: Any) -> None:
     payload = structured(await facade.call_tool("get_diagnostics", {}))
-    assert "live_fallback" in payload
-    assert "enabled" in payload["live_fallback"]
-    assert "base_url" in payload["live_fallback"]
-    assert payload["live_fallback"]["enabled"] is False
+    assert "live_fallback" in payload["result"]
+    assert "enabled" in payload["result"]["live_fallback"]
+    assert "base_url" in payload["result"]["live_fallback"]
+    assert payload["result"]["live_fallback"]["enabled"] is False
 
 
 async def test_diagnostics_redacts_base_url_secrets(
@@ -166,7 +166,7 @@ async def test_diagnostics_redacts_base_url_secrets(
 
     monkeypatch.setattr(settings.mousemine, "base_url", "https://user:pass@mm.internal?token=x")
     payload = structured(await facade.call_tool("get_diagnostics", {}))
-    base_url = payload["live_fallback"]["base_url"]
+    base_url = payload["result"]["live_fallback"]["base_url"]
     for secret in ("user", "pass", "token"):
         assert secret not in base_url
     assert base_url == "https://mm.internal"
