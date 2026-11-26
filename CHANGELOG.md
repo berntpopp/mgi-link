@@ -4,6 +4,23 @@ All notable changes to mgi-link are documented here.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-26
+
+Adopts the Response-Envelope Standard v1.2 (#130).
+
+- BREAKING: every successful result is the standard frame `{success, result | results,
+  _meta}`. A tool that returned its fields at the top level (`resolve_marker`, `get_marker`,
+  `get_mp_term`, `get_server_capabilities`, `get_diagnostics`, ...) returns them unchanged
+  under `result`: read `result.mgi_id` instead of `mgi_id`. Tools that return `results` and
+  error envelopes keep their shape.
+- Provenance on every successful result: `_meta.source` (`mgi`), `_meta.data_version` (the
+  MGI release the local index was built from) and `_meta.retrieved_at` (RFC 3339 UTC build
+  time of that index, when its reports were fetched). An answer from the live MouseMine
+  fallback reports `mousemine`, `live` and the time of the call.
+- `_meta.elapsed_ms` on every result, success and error.
+- Tests run every data tool against the fixture index and validate each result against the
+  envelope JSON Schema (berntpopp/genefoundry-envelope v1.2.0, vendored with its sha256).
+
 ## [0.8.3] - 2026-11-19
 
 - search_markers honours response_mode: compact returns the advertised summary keys
